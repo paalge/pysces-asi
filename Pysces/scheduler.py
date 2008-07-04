@@ -35,7 +35,6 @@ class scheduler:
         self.__settings_manager.register("latitude",self.__createObservatory)
         self.__settings_manager.register("longitude",self.__createObservatory)
         self.__settings_manager.register("altitude",self.__createObservatory)    
-
         
    
     def start(self):
@@ -66,24 +65,38 @@ class scheduler:
             MOON_PHASE = float(moon.moon_phase * 100.0)
 
             if self.__current_capture_mode != None:
-                mode_name = self.__current_capture_mode.name()
+                current_mode_name = self.__current_capture_mode.name()
             else:
-                mode_name = None
+                current_mode_name = None
                 
             schedule = self.__settings_manager.grab("schedule")
+            flag = False
             for test,capture_mode in schedule.items():
-                if eval(test) and capture_mode != mode_name:
-                    if mode_name != None:
+                
+                if eval(test) and capture_mode != current_mode_name:
+                    
+                    if current_mode_name != None:
                         self.__current_capture_mode.exit()
+                        
                     capture_settings = self.__settings_manager.grab("capture modes")[capture_mode]
                     self.__settings_manager.release("capture modes")
+                    
                     self.__current_capture_mode = captureMode.captureMode(capture_settings,self.__settings_manager,self.__camera_manager)
+                    print "set capture mode to",self.__current_capture_mode.name()
+                    self.__settings_manager.set("current capture mode",self.__current_capture_mode.name())
                     self.__current_capture_mode.start()
-   
-                elif capture_mode == mode_name and not eval(test):
-                    self.__current_capture_mode.exit()
-                    self.__current_capture_mode = None
-            
+                    flag = True
+                    break
+                
+                elif eval(test) and capture_mode == current_mode_name:
+                    #current mode is still valid so break out of checking loop
+                    flag = True
+                    break
+                
+            if not flag:
+                self.__current_capture_mode.exit()
+                self.__current_capture_mode = None
+                print "set capture mode to None"
             
                 
             self.__settings_manager.release("observatory")

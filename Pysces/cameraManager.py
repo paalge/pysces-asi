@@ -21,31 +21,35 @@ class cameraManager:
         
         
         #set callbacks for camera configs
-        self.__settings_manager.register("iso",self.updateConfigs)
-        self.__settings_manager.register("f-number",self.updateConfigs)
-        self.__settings_manager.register("exptime",self.updateConfigs)
-        self.__settings_manager.register("imgsize",self.updateConfigs)
-        self.__settings_manager.register("whitebalance",self.updateConfigs)
-        self.__settings_manager.register("focusmode",self.updateConfigs)
+        self.__settings_manager.register("current capture mode",self.updateConfigs)
         
-        self.__settings_manager.register("unprocessed_raw",self.updateImgs)
-        self.__settings_manager.register("unprocessed_jpeg",self.updateImgs)
-        self.__settings_manager.register("PASKIL_png",self.updateImgs)
-        self.__settings_manager.register("d_quicklook",self.updateImgs)
-        self.__settings_manager.register("d_map_projection",self.updateImgs)
-        self.__settings_manager.register("d_movie",self.updateImgs)
+        self.__settings_manager.register("current capture mode",self.updateImgs)
+        
         
     ############################################################################################## 
     
     def updateImgs(self):
-        get_raw = self.__settings_manager.grab("unprocessed_raw")
-        jpg0 = self.__settings_manager.grab("unprocessed_jpeg")
-        jpg1 = self.__settings_manager.grab("PASKIL_png")
-        jpg2 = self.__settings_manager.grab("d_quicklook")
-        jpg3 = self.__settings_manager.grab("d_map_projection")
-        jpg4 = self.__settings_manager.grab("d_movie")
+        """
+        Function updates the imgquality camera config, controlling whether it records JPEG, NEF
+        or JPEG+NEF images.
+        """
         
-        if jpg0 or jpg1 or jpg2 or jpg3 or jpg4:
+        capture_modes = self.__settings_manager.grab("capture modes")
+        output_types = self.__settings_manager.grab("output types")
+        ccm = self.__settings_manager.grab("current capture mode")
+        files = []
+        get_raw = False
+        get_jpg = False
+        
+        #look at which files are needed in the outputs for this capture mode
+        if ccm != "" and ccm != None:
+            for output in capture_modes[ccm]["outputs"]:
+                files.append(output_types[output]["image_type"])
+        
+        if files.count("NEF") != 0:
+            get_raw = True
+        
+        if files.count("jpeg") != 0:
             get_jpg = True
         
         if get_jpg and get_raw:
@@ -55,12 +59,10 @@ class cameraManager:
         else:
             self.setConfig("imgquality", "JPEG Normal")
         
-        self.__settings_manager.release("unprocessed_raw")
-        self.__settings_manager.release("unprocessed_jpeg")
-        self.__settings_manager.release("PASKIL_png")
-        self.__settings_manager.release("d_quicklook")
-        self.__settings_manager.release("d_map_projection")
-        self.__settings_manager.release("d_movie")
+        self.__settings_manager.release("current capture mode")
+        self.__settings_manager.release("output types")
+        self.__settings_manager.release("capture modes")
+
         
     ##############################################################################################         
     
@@ -173,25 +175,28 @@ class cameraManager:
             self.__settings_manager.release("tmp dir")
             self.__camera_lock.release()
         
-        if get_raw and get_jpeg:
-            return tmp_dir+"/"+time_of_capture.strftime(filename_format)+".JPG",tmp_dir+"/"+time_of_capture.strftime(filename_format)+".NEF"
-        elif get_raw:
-            return None,tmp_dir+"/"+time_of_capture.strftime(filename_format)+".NEF"
-        elif get_jpeg:
-            return tmp_dir+"/"+time_of_capture.strftime(filename_format)+".JPG",None
-        else:
-            return None,None
+        new_images = {}
+        if get_raw:
+            new_images["NEF"] = tmp_dir+"/"+time_of_capture.strftime(filename_format)+".NEF"
+        if get_jpeg:
+            new_images["jpeg"] = tmp_dir+"/"+time_of_capture.strftime(filename_format)+".JPG"
+        
+        self.__settings_manager.set("most recent images",new_images)
     
     ############################################################################################## 
     
     def updateConfigs(self):
         camera_configs = self.__settings_manager.grab("camera configs")
-        iso = self.__settings_manager.grab("iso")
-        f_number = self.__settings_manager.grab("f-number")
-        exptime = self.__settings_manager.grab("exptime")
-        imgsize = self.__settings_manager.grab("imgsize")
-        whitebalance = self.__settings_manager.grab("whitebalance")
-        focusmode = self.__settings_manager.grab("focusmode")
+        capture_modes = self.__settings_manager.grab("capture modes")
+        ccm = capture_modes[self.__settings_manager.grab("current capture mode")]
+        
+        
+        iso = ccm["iso"]
+        f_number = ccm["f-number"]
+        exptime = ccm["exptime"]
+        imgsize = ccm["imgsize"]
+        whitebalance = ccm["whitebalance"]
+        focusmode = ccm["focusmode"]
         
         if iso != camera_configs['iso'].current:
             self.setConfig('iso', str(iso))
@@ -212,13 +217,9 @@ class cameraManager:
             self.setConfig('focusmode', str(focusmode))
         
         self.__settings_manager.release("camera configs")
-        self.__settings_manager.release("iso")
-        self.__settings_manager.release("f-number")
-        self.__settings_manager.release("exptime")
-        self.__settings_manager.release("imgsize")
-        self.__settings_manager.release("whitebalance")
-        self.__settings_manager.release("focusmode")
-     
+        self.__settings_manager.release("current capture mode")
+        self.__settings_manager.release("capture modes")
+        
     ##############################################################################################     
     
     def setConfig(self,name,value):

@@ -25,10 +25,12 @@ class hostManager:
         settings_manager.register("month_folder_format",self.updateFolders)
         settings_manager.register("day_folder_format",self.updateFolders)
         settings_manager.register("day",self.updateFolders)
+        settings_manager.register("current capture mode",self.updateFolders)
         
     ############################################################################################## 
              
     def updateFolders(self):
+        print "updateFolders"
         if not self.__running:
             return
         
@@ -60,31 +62,31 @@ class hostManager:
             os.makedirs(current_folder)
         
         #create Pysces sub_directories
-        d_quicklook = self.__settings_manager.grab("d_quicklook")
-        if d_quicklook and not os.path.exists(current_folder + "/Quicklooks"):
+        capture_modes = self.__settings_manager.grab("capture modes")
+        output_types = self.__settings_manager.grab("output types")
+        ccm = self.__settings_manager.grab("current capture mode")
+        outputs = []
+        
+        #look at which files are needed in the outputs for this capture mode
+        if ccm != "" and ccm != None:
+            for output in capture_modes[ccm]["outputs"]:
+                outputs.append(output_types[output]["type"])
+
+        if outputs.count("keogram") != 0 and not os.path.exists(current_folder + "/Quicklooks"):
             os.mkdir(current_folder + "/Quicklooks")
-        self.__settings_manager.release("d_quicklook")
         
-        unprocessed_raw = self.__settings_manager.grab("unprocessed_raw")
-        if unprocessed_raw and not os.path.exists(current_folder + "/Raw"):
-            os.mkdir(current_folder + "/Raw")
-        self.__settings_manager.release("unprocessed_raw")
-        
-        
-        unprocessed_jpeg = self.__settings_manager.grab("unprocessed_jpeg")
-        PASKIL_png = self.__settings_manager.grab("PASKIL_png")
-        if (unprocessed_jpeg or PASKIL_png) and not os.path.exists(current_folder + "/Images"):
+        if outputs.count("raw") != 0 and not os.path.exists(current_folder + "/Raw"):
+            os.mkdir(current_folder + "/Raw")        
+
+        if outputs.count("image") != 0 and not os.path.exists(current_folder + "/Images"):
             os.mkdir(current_folder + "/Images")
-        
-        self.__settings_manager.release("unprocessed_jpeg")
-        self.__settings_manager.release("PASKIL_png")
-        
-        d_map_projection = self.__settings_manager.grab("d_map_projection")
-        if d_map_projection and not os.path.exists(current_folder + "/Maps"):
+
+        if outputs.count("map") != 0 and not os.path.exists(current_folder + "/Maps"):
             os.mkdir(current_folder + "/Maps")
-        self.__settings_manager.release("d_map_projection")
+
         
         #update output folder variable
+        print "set output folder"
         self.__settings_manager.set("output folder",current_folder)
         
         #release global variables
@@ -93,19 +95,26 @@ class hostManager:
         self.__settings_manager.release("month_folder_format")
         self.__settings_manager.release("day_folder_format")
 
+        self.__settings_manager.release("current capture mode")
+        self.__settings_manager.release("capture modes")
+        self.__settings_manager.release("output types")
         
     ##############################################################################################                        
 
     def createTmpDir(self):
+        print "creating tmp dir"
         if not self.__running:
             return
         old_tmp_dir = self.__settings_manager.grab("tmp dir")
+        print "grabbed tmp dir"
         output_folder = self.__settings_manager.grab("output folder")
+        print "grabbed output folder"
         self.__settings_manager.release("tmp dir")
         
-        #if the new tmp dir is the same as the old one then return
-        if old_tmp_dir == output_folder+"/tmp":
+        #if the new tmp dir is the same as the old one and still exists then return
+        if old_tmp_dir == output_folder+"/tmp" and os.path.exists(output_folder+"/tmp"):
             self.__settings_manager.release("output folder")
+            print "tmp dir made"
             return
         
         #create the new tmp directory
@@ -115,14 +124,14 @@ class hostManager:
         self.__settings_manager.set("tmp dir",output_folder+"/tmp")
         
         #remove the old tmp dir when it is empty
-        if old_tmp_dir != None and os.path.exists(old_tmp_dir):
+        if old_tmp_dir != None and os.path.exists(old_tmp_dir) and old_tmp_dir != output_folder+"/tmp":
             t=threading.Thread(target=self.__removeDir,args=(old_tmp_dir,))
             self.__removal_threads=t #this variable is set to the last thread to be started
             t.start()
             
         self.__settings_manager.release("output folder")
         
-            
+        print "tmp dir made"    
     ##############################################################################################                                   
      
     def __removeDir(self,dir):

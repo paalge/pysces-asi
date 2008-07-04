@@ -1,64 +1,93 @@
+"""
+The settingsManager module provides classes and functions for managing all the settings (global
+variables) for Pysces. Functions for reading and writing to the ascii settings file are provided
+in addition to the settingsManager class.
+"""
+
+
 from __future__ import with_statement
 import threading,os
 import persist
 
 
-def updateVariables(fp,ofp,i,settings):
-    #read file line by line
-            line = "not an empty string"
-            while line != "":
-                line = fp.readline()
-                i+=1 #incremement line count
-                if line.isspace():
-                    #write blank lines
-                    ofp.write(line)
-                    continue
-                elif line == "":
-                    #skip end of file
-                    continue
-                elif line.lstrip().startswith("#"):
-                    #write comment lines
-                    ofp.write(line)
-                    continue
-                elif line.lstrip().startswith("<end>"):
-                    ofp.write(line)
-                    return i
-                elif line.count("#") == 0 and line.count("=") > 0:
-                    #life is easy and there is no embedded comments
-                    key,sep,value = line.partition("=")
-                    
-                elif line.count("=") > 0:
-                    #life is harder as there are embedded comments
-                    line_no_comment = line
-                    while line_no_comment.count(r"\#") < line_no_comment.count("#"):
-                        line_no_comment = line_no_comment.rpartition("#")[0]
-                        
-                    key,sep,value = line_no_comment.partition("=")
-                
-                else:
-                    raise IOError, "Failed to read settings file, invalid entry on line "+str(i)
-                
-                #remove spaces from value and key
-                value = value.lstrip().rstrip()
-                key = key.lstrip().rstrip()
-                
-                value = eval(value)
-                
-                #see if the value stored in memory is different
-                new_value = settings[key]
-                
-                if new_value != value:    
-                    #change value in line
-                    new_value = str(new_value).replace("#","\\#")
-                    line = line.replace(str(value),new_value,1)
-                    
-                ofp.write(line)
+##############################################################################################
+
+def updateVariables(fp,ofp,line_no,settings):
+    """
+    Function writes a new settings file with the settings values stored in memory (within the 
+    settingsManager class). The new file can then be copied across to the old file thus preventing
+    errors in the update process from destroying the original settings file. The fp and ofp 
+    arguments should be file objects for the original settings file (read) and the new settings file
+    (write) respectively. line_no should be the current line number in the settings file, and settings 
+    should be a dictionary of name:value pairs representing the variables contained in one declaration
+    block.
+    """
     
-            return i
+    #read file line by line
+    line = "not an empty string"
+    while line != "":
+        line = fp.readline()
+        line_no+=1 #incremement line count
+        if line.isspace():
+            #write blank lines
+            ofp.write(line)
+            continue
+        elif line == "":
+            #skip end of file
+            continue
+        elif line.lstrip().startswith("#"):
+            #write comment lines
+            ofp.write(line)
+            continue
+        elif line.lstrip().startswith("<end>"):
+            ofp.write(line)
+            return line_no
+        elif line.count("#") == 0 and line.count("=") > 0:
+            #life is easy and there is no embedded comments
+            key,sep,value = line.partition("=")
+            
+        elif line.count("=") > 0:
+            #life is harder as there are embedded comments
+            line_no_comment = line
+            
+            #here we need to ignore escaped hashes, including escaped hashes that appear within comments
+            while line_no_comment.count(r"\#") < line_no_comment.count("#"):
+                line_no_comment = line_no_comment.rpartition("#")[0]
+                
+            key,sep,value = line_no_comment.partition("=")
+        
+        else:
+            raise IOError, "Failed to read settings file, invalid entry on line "+str(i)
+        
+        #remove spaces from value and key
+        value = value.lstrip().rstrip()
+        key = key.lstrip().rstrip()
+        
+        value = eval(value)
+        
+        #see if the value stored in memory is different
+        new_value = settings[key]
+        
+        if new_value != value:    
+            #change value in line
+            new_value = str(new_value).replace("#","\\#")
+            line = line.replace(str(value),new_value,1)
+            
+        ofp.write(line)
+    
+    #return the current line number - useful to know for error messages
+    return line_no
         
 ##############################################################################################
 
 def readVariables(fp,line_no):
+    """
+    Returns a tuple (settings,line_no). Where settings is a dictionary of name:value pairs for the 
+    variables within a declaration block and line_no is the line number of the end of the declaration 
+    block. The fp argument should be a file object for the settings file opened for reading. line_no 
+    should be the current line number in the file (the beginning of the declaration block).
+    """
+    
     variables = {}
 
     #read file line by line
@@ -66,7 +95,7 @@ def readVariables(fp,line_no):
     line ="string"
     while line != "":
         line = fp.readline()
-        i+=1 #incremement line count
+        line_no+=1 #incremement line count
         if line.isspace():
             #skip blank lines
             continue
@@ -78,7 +107,7 @@ def readVariables(fp,line_no):
             continue
         elif line.lstrip().startswith("<end>"):
             #skip rest of file on encountering <end> statement
-            return variables,i   
+            return variables,line_no   
         elif line.count("#") == 0 and line.count("=") > 0:
             #life is easy and there is no embedded comments
             key,sep,value = line.partition("=")
@@ -112,7 +141,7 @@ def readVariables(fp,line_no):
         except NameError:
             raise NameError, "Failed to read settings file. Illegal value on line "+str(i)+" Should it be a string?"
 
-    return variables,i
+    return variables,line_no
 
 ##############################################################################################
 
@@ -121,7 +150,7 @@ def loadSettingsFile(filename):
     Reads the settings file and returns a dictionary containing the name,value pairs contained 
     in the file.
     """
-    settings = {"capture modes":{}}
+    settings = {"capture modes":{},"image types":{},"output types":{}}
     
     with open(filename,"r") as fp: 
     
@@ -168,6 +197,21 @@ def loadSettingsFile(filename):
                 schedule,i = readVariables(fp,i)
                 
                 settings["schedule"] = schedule
+            
+            elif line.lstrip().startswith("<image>"):
+                #image type definition
+                image,i = readVariables(fp,i)
+                
+                settings["image types"][image["image_type"]] = image
+                
+            elif line.lstrip().startswith("<output>"):
+                #output type definition
+                output,i = readVariables(fp,i)
+                
+                settings["output types"][output["name"]] = output
+            
+            else:
+                raise ValueError, "Error reading settings file. Illegal value on line "+str(i)
 
     return settings
 
@@ -190,20 +234,11 @@ class settingsManager:
         home = os.path.expanduser("~")
         self.create("Settings File",home+"/.Pysces/settings.txt")
         self.create("persist filename",home+"/.Pysces/persistant")
-        
+        self.create("current capture mode","")
+        self.create("most recent images","")
         self.create("output","")
         self.create("persist names",[])
-        self.create("day","")
-        
-        #create camera settings
-        self.create("iso","")
-        self.create("f-number","")
-        self.create("exptime","")
-        self.create("imgsize","")
-        self.create("whitebalance","")
-        self.create("focusmode","")
-        self.create("name","")
-        self.create("delay","")
+        self.create("day","")       
         
         #load settings file 
         settings_file=self.grab('Settings File')
@@ -330,7 +365,9 @@ class settingsManager:
     
     def register(self,name, callback):
         """
-        Registers a callback function for a variable.
+        Registers a callback function for a variable. This will be called whenever the variable is set.
+        The function will be called without any arguments, unless name = "output" in which case the 
+        function will be called with the new value of "output" as an argument.
         """
         self.__callbacks[name].append(callback)
         
@@ -338,7 +375,9 @@ class settingsManager:
     
     def create(self,name,value,persistant=False):
         """
-        Creates a new variable. If persistant=True, then the variable value will survive program restart.
+        Creates a new variable. If persistant=True, then the variable value will survive program restart
+        even if it is not in the settings file. Variables which are in the settings file should not be
+        created as persistant.
         """
         if self.__variables.has_key(name):
             raise ValueError,"A variable called "+name+" already exists."
@@ -407,6 +446,34 @@ class settingsManager:
                     elif line.lstrip().startswith("<schedule>"):
                         ofp.write(line)
                         updateVariables(fp,ofp,i,self.__variables["schedule"])
+                    
+                    elif line.lstrip().startswith("<output>"):
+                        ofp.write(line)
+                        #record position in file of declaration
+                        dec_start = fp.tell()
+                        
+                        #read declaration to see which output this is
+                        output,j = readVariables(fp,i)
+                        
+                        #go back to start of declaration
+                        fp.seek(dec_start)
+                        
+                        #update file
+                        updateVariables(fp,ofp,i,self.__variables["output types"][output["name"]])
+                    
+                    elif line.lstrip().startswith("<image>"):
+                        ofp.write(line)
+                        #record position in file of declaration
+                        dec_start = fp.tell()
+                        
+                        #read declaration to see which image this is
+                        image,j = readVariables(fp,i)
+                        
+                        #go back to start of declaration
+                        fp.seek(dec_start)
+                        
+                        #update file
+                        updateVariables(fp,ofp,i,self.__variables["image types"][image["image_type"]])
                         
                     else:
                         raise ValueError,"Unable to update settings file. Error on line "+str(i)    

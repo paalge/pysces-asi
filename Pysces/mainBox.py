@@ -44,7 +44,7 @@ class mainBox:
         self.__settings_manager.set("output", "mainBox> Killing scheduler")
         self.__scheduler.exit()
         self.__capture_thread.join()
-        
+
         #kill host manager
         self.__settings_manager.set("output","mainBox> Killing host_manager")
         self.__host_manager.exit()
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         while (True):
             pass
     except KeyboardInterrupt:
-        print "Closing capture thread, please wait...."
+        print "Pysces> Closing capture thread, please wait...."
         main_box.exit()
         
         sys.exit()
