@@ -71,8 +71,8 @@ class mainBox:
            
     ############################################################################################## 
        
-    def grabVar(self,name):
-        return self.__settings_manager.grab(name)
+    def grabVar(self,names):
+        return self.__settings_manager.grab(names)
     
     ############################################################################################## 
         

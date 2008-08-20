@@ -30,108 +30,98 @@ class hostManager:
     ############################################################################################## 
              
     def updateFolders(self):
-        print "updateFolders"
+        #if Pysces is not in an active state then do not create new folders 
         if not self.__running:
             return
         
         #get required global variables
-        folder_on_host =  self.__settings_manager.grab("folder_on_host")
-        year_folder_format = self.__settings_manager.grab("year_folder_format")
-        month_folder_format = self.__settings_manager.grab("month_folder_format")
-        day_folder_format = self.__settings_manager.grab("day_folder_format")
-
-        today = datetime.datetime.now()
-        folders=[folder_on_host]
+        glob_vars = self.__settings_manager.grab(["folder_on_host","year_folder_format","month_folder_format","day_folder_format","capture modes","output types","current capture mode"])
         
-        for format in [year_folder_format,month_folder_format,day_folder_format]: 
-            if format != None:
-                folders.append(today.strftime(format))
-        
-        current_folder = ""
-        
-        #create the folder structure
-        for folder in folders:
-            current_folder += folder+"/"
-        
-        #remove trailing /
-        if current_folder.endswith("/"):
-            current_folder = current_folder.rstrip("/")
+        try:
+            today = datetime.datetime.now()
+            folders=[glob_vars['folder_on_host']]
             
-        #see if it exists and if not then create it
-        if not os.path.exists(current_folder):
-            os.makedirs(current_folder)
-        
-        #create Pysces sub_directories
-        capture_modes = self.__settings_manager.grab("capture modes")
-        output_types = self.__settings_manager.grab("output types")
-        ccm = self.__settings_manager.grab("current capture mode")
-        outputs = []
-        
-        #look at which files are needed in the outputs for this capture mode
-        if ccm != "" and ccm != None:
-            for output in capture_modes[ccm]["outputs"]:
-                outputs.append(output_types[output]["type"])
-
-        if outputs.count("keogram") != 0 and not os.path.exists(current_folder + "/Quicklooks"):
-            os.mkdir(current_folder + "/Quicklooks")
-        
-        if outputs.count("raw") != 0 and not os.path.exists(current_folder + "/Raw"):
-            os.mkdir(current_folder + "/Raw")        
-
-        if outputs.count("image") != 0 and not os.path.exists(current_folder + "/Images"):
-            os.mkdir(current_folder + "/Images")
-
-        if outputs.count("map") != 0 and not os.path.exists(current_folder + "/Maps"):
-            os.mkdir(current_folder + "/Maps")
-
-        
-        #update output folder variable
-        print "set output folder"
-        self.__settings_manager.set("output folder",current_folder)
-        
-        #release global variables
-        self.__settings_manager.release("folder_on_host")
-        self.__settings_manager.release("year_folder_format")
-        self.__settings_manager.release("month_folder_format")
-        self.__settings_manager.release("day_folder_format")
-
-        self.__settings_manager.release("current capture mode")
-        self.__settings_manager.release("capture modes")
-        self.__settings_manager.release("output types")
+            for format in [glob_vars['year_folder_format'],glob_vars['month_folder_format'],glob_vars['day_folder_format']]: 
+                if format != None:
+                    folders.append(today.strftime(format))
+            
+            current_folder = ""
+            
+            #create the folder structure
+            for folder in folders:
+                current_folder += folder+"/"
+            
+            #remove trailing /
+            if current_folder.endswith("/"):
+                current_folder = current_folder.rstrip("/")
+                
+            #see if it exists and if not then create it
+            if not os.path.exists(current_folder):
+                os.makedirs(current_folder)     
+            
+            #rename globals for clarity
+            capture_modes = glob_vars["capture modes"]
+            output_types = glob_vars["output types"]
+            ccm = glob_vars["current capture mode"]
+            
+            #create Pysces sub_directories
+            outputs = []
+            
+            #look at which files are needed in the outputs for this capture mode
+            if ccm != "" and ccm != None:
+                for output in capture_modes[ccm]["outputs"]:
+                    outputs.append(output_types[output]["type"])
+    
+            if outputs.count("keogram") != 0 and not os.path.exists(current_folder + "/Quicklooks"):
+                os.mkdir(current_folder + "/Quicklooks")
+            
+            if outputs.count("raw") != 0 and not os.path.exists(current_folder + "/Raw"):
+                os.mkdir(current_folder + "/Raw")        
+    
+            if outputs.count("image") != 0 and not os.path.exists(current_folder + "/Images"):
+                os.mkdir(current_folder + "/Images")
+    
+            if outputs.count("map") != 0 and not os.path.exists(current_folder + "/Maps"):
+                os.mkdir(current_folder + "/Maps")
+               
+            #update output folder variable
+            self.__settings_manager.set("output folder",current_folder)
+            
+        finally:
+            #release global variables
+            self.__settings_manager.release(glob_vars)
         
     ##############################################################################################                        
 
     def createTmpDir(self):
-        print "creating tmp dir"
+        #if not in active state then don't create tmp directory
         if not self.__running:
             return
+        
+        glob_vars = self.__settings_manager.grab(["tmp dir","output folder"])
         old_tmp_dir = self.__settings_manager.grab("tmp dir")
-        print "grabbed tmp dir"
         output_folder = self.__settings_manager.grab("output folder")
-        print "grabbed output folder"
-        self.__settings_manager.release("tmp dir")
         
-        #if the new tmp dir is the same as the old one and still exists then return
-        if old_tmp_dir == output_folder+"/tmp" and os.path.exists(output_folder+"/tmp"):
-            self.__settings_manager.release("output folder")
-            print "tmp dir made"
-            return
-        
-        #create the new tmp directory
-        if not os.path.exists(output_folder+"/tmp"):
-            os.makedirs(output_folder+"/tmp")
-        
-        self.__settings_manager.set("tmp dir",output_folder+"/tmp")
-        
-        #remove the old tmp dir when it is empty
-        if old_tmp_dir != None and os.path.exists(old_tmp_dir) and old_tmp_dir != output_folder+"/tmp":
-            t=threading.Thread(target=self.__removeDir,args=(old_tmp_dir,))
-            self.__removal_threads=t #this variable is set to the last thread to be started
-            t.start()
+        try:
+            #if the new tmp dir is the same as the old one and still exists then return
+            if glob_vars['tmp dir'] == glob_vars['output folder']+"/tmp" and os.path.exists(glob_vars['output folder']+"/tmp"):
+                #globals are released in finally: block
+                return
             
-        self.__settings_manager.release("output folder")
-        
-        print "tmp dir made"    
+            #create the new tmp directory
+            if not os.path.exists(glob_vars['output folder']+"/tmp"):
+                os.makedirs(glob_vars['output folder']+"/tmp")
+            
+            self.__settings_manager.set("tmp dir",glob_vars['output folder']+"/tmp")
+            
+            #remove the old tmp dir when it is empty
+            if glob_vars['tmp dir'] != None and os.path.exists(glob_vars['tmp dir']) and glob_vars['tmp dir'] != glob_vars['output folder']+"/tmp":
+                t=threading.Thread(target=self.__removeDir,args=(glob_vars['tmp dir'],))
+                self.__removal_threads=t #this variable is set to the last thread to be started
+                t.start()
+        finally:
+            self.__settings_manager.release(glob_vars)
+ 
     ##############################################################################################                                   
      
     def __removeDir(self,dir):

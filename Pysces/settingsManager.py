@@ -6,7 +6,7 @@ in addition to the settingsManager class.
 
 
 from __future__ import with_statement
-import threading,os
+import threading,os,time
 import persist
 
 
@@ -240,10 +240,10 @@ class settingsManager:
         self.create("persist names",[])
         self.create("day","")       
         
-        #load settings file 
-        settings_file=self.grab('Settings File')
-        settings = loadSettingsFile(settings_file)
-        self.release('Settings File')       
+        #load settings file
+        glob_vars = self.grab(['Settings File'])
+        settings = loadSettingsFile(glob_vars['Settings File'])
+        self.release(glob_vars)       
         
         #store settings in variables
         for key in settings.keys():
@@ -258,34 +258,63 @@ class settingsManager:
         for key in persistant_data.keys():
             self.create(key,persistant_data[key],persistant=True)
             
-    ##############################################################################################            
+    ##############################################################################################      
+    
+    def grab(self,names):
+        """
+        Acquires the locks on a set of variables specified by a list of names and returns a dictionary
+        containing the variables. If not all of the locks can be acquired, then they will all be released,
+        and the function will try again. Hopefully this will solve all thread locking issues!
+        """
+        #check that a list was passed
+        if type(names) != type(list()):
+            raise TypeError, "Expecting a list of variable names"
+        
+        grabbed = False
+        acquired_locks=[]
+        
+        #enter loop to keep trying to lock variables
+        while not grabbed: 
+            for name in names:
+                #attempt to acquire lock, but don't block 
+                if self.__locks[name].acquire(blocking=False):
+                    #add variable name to the listed of locked variables
+                    acquired_locks.append(name)
             
-    def grab(self,name):
-        """
-        Acquires the lock on the variable and then returns a copy of its value. Each call to this 
-        method should be followed by a call to release when you are finished with the variable.
-        """
-        #acquire lock
-        self.__locks[name].acquire()
+            #check if all the locks were acquired
+            if len(acquired_locks) == len(names):
+                grabbed = True
+            else:
+                #release all the locks
+                for name in acquired_locks:
+                    self.__locks[name].release()
+                
+                acquired_locks =[]    
+                
+                #sleep for a small amount of time
+                time.sleep(0.001)
         
-        #resolve any shell variables
-        if type(self.__variables[name]) == type(str()) and self.__variables[name].count("$") != 0:
-            return(os.path.expandvars(self.__variables[name]))
+        #build a dictionary of the variables
+        variables = {}
         
-        #attempt to create a hard copy of the variable
-        try:
-            return self.__variables[name].copy()
-        except AttributeError:
-            return self.__variables[name]
-        
+        for name in names:
+            variables[name] = self.__variables[name]
+
+        return variables
+           
     ##############################################################################################  
           
-    def release(self,name):
+    def release(self,variables):
         """
-        Releases the lock on the specified variable.
+        Releases the locks on the variables in the dictionary 'variables'.
         """   
-        #release lock
-        self.__locks[name].release()
+        #check type
+        if type(variables) != type(dict()):
+            raise TypeError, "Expecting a dictionary of name:value pairs"
+        
+        #release locks
+        for name in variables.keys():
+            self.__locks[name].release()
         
     ##############################################################################################  
           

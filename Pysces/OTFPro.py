@@ -1,4 +1,5 @@
 import threading,os
+import shutil
 #from PASKIL import allskyImage
 
 #define a dictionary relating output types to processing functions
@@ -11,6 +12,7 @@ class OTFPro:
         self.__settings_manager = settings_manager
         self.__worker_threads = []
         self.__settings_manager.register("most recent images", self.start)
+        
     ##############################################################################################
     
     def start(self):
@@ -37,14 +39,16 @@ class OTFPro:
     ##############################################################################################
     
     def __run(self,local_data):
-        images = self.__settings_manager.grab("most recent images")
-        print "OTFPro> Processing files",images
-        for file in images.values():
-            os.remove(file)
-        
-        self.__settings_manager.release("most recent images")
-        return
-    
+        glob_vars = self.__settings_manager.grab(["most recent images","output folder"])
+
+        try:
+            shutil.copy(glob_vars['most recent images']['JPEG'],glob_vars['output folder'] +"/Images/"+os.path.split(glob_vars['most recent images']['JPEG'])[1])
+            
+            for file in glob_vars['most recent images'].values():
+                os.remove(file)
+        finally:
+            self.__settings_manager.release(glob_vars)
+
     ##############################################################################################
 
     def join(self):

@@ -33,192 +33,198 @@ class cameraManager:
         Function updates the imgquality camera config, controlling whether it records JPEG, NEF
         or JPEG+NEF images.
         """
+        #grab global variables
+        glob_vars = self.__settings_manager.grab(["capture modes","output types","current capture mode"])
         
-        capture_modes = self.__settings_manager.grab("capture modes")
-        output_types = self.__settings_manager.grab("output types")
-        ccm = self.__settings_manager.grab("current capture mode")
-        files = []
-        get_raw = False
-        get_jpg = False
-        
-        #look at which files are needed in the outputs for this capture mode
-        if ccm != "" and ccm != None:
-            for output in capture_modes[ccm]["outputs"]:
-                files.append(output_types[output]["image_type"])
-        
-        if files.count("NEF") != 0:
-            get_raw = True
-        
-        if files.count("jpeg") != 0:
-            get_jpg = True
-        
-        if get_jpg and get_raw:
-            self.setConfig("imgquality", "NEF+Normal")
-        elif get_raw:
-            self.setConfig("imgquality", "NEF (Raw)")
-        else:
-            self.setConfig("imgquality", "JPEG Normal")
-        
-        self.__settings_manager.release("current capture mode")
-        self.__settings_manager.release("output types")
-        self.__settings_manager.release("capture modes")
-
+        try:
+            capture_modes = glob_vars["capture modes"]
+            output_types = glob_vars["output types"]
+            ccm = glob_vars["current capture mode"]
+            files = []
+            get_raw = False
+            get_jpg = False
+            
+            #look at which files are needed in the outputs for this capture mode
+            if ccm != "" and ccm != None:
+                for output in capture_modes[ccm]["outputs"]:
+                    files.append(output_types[output]["image_type"])
+            
+            if files.count("NEF") != 0:
+                get_raw = True
+            
+            if files.count("jpeg") != 0:
+                get_jpg = True
+            
+            if get_jpg and get_raw:
+                self.setConfig("imgquality", "NEF+Normal")
+            elif get_raw:
+                self.setConfig("imgquality", "NEF (Raw)")
+            else:
+                self.setConfig("imgquality", "JPEG Normal")
+        finally:
+            self.__settings_manager.release(glob_vars)
         
     ##############################################################################################         
     
     def captureImage(self):
-        self.__camera_lock.acquire()
+        
+        #grab globals
+        glob_vars = self.__settings_manager.grab(["camera configs","tmp dir","filename_format"])
+        
         try:
-
-            configs = self.__settings_manager.grab("camera configs")
-
-            get_raw = False
-            get_jpeg = False
+            configs = glob_vars["camera configs"]
             
-            #see if we need to download a raw file
-            if configs["imgquality"].current.count("NEF") != 0:
-                get_raw = True
+            self.__camera_lock.acquire()
             
-            if configs["imgquality"].current.count("Normal") != 0:
-                get_jpeg = True
-            
-            #get list of files on camera
-            #run gphoto function in separate process
-            p = Popen("gphoto2 -L ",shell=True,stdout=PIPE)
-            pre_image_out = string.join(p.stdout.readlines())
-            
-            #wait for process to finish
-            p.wait()
-    
-            pre_image_list = pre_image_out.split("\n")
-
-            tmp_dir = self.__settings_manager.grab("tmp dir")
-            filename_format = self.__settings_manager.grab("filename_format")
-            
-            time_of_capture = datetime.datetime.now()
-            self.__settings_manager.set("output", "cameraManager> Capturing image.")
-            p = Popen("gphoto2 --capture-image ",shell=True)
-            p.wait()
-            
-            if p.returncode != 0:
-                raise RuntimeError, "Gphoto2 Error: Failed to capture image"
-            
-            #wait for the image to be stored for up to one minute
-            flag=False
-            while time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.now() and not flag:
-                time.sleep(10)
+            try:
+                get_raw = False
+                get_jpeg = False
+                
+                #see if we need to download a raw file
+                if configs["imgquality"].current.count("NEF") != 0:
+                    get_raw = True
+                
+                if configs["imgquality"].current.count("Normal") != 0:
+                    get_jpeg = True
+                
                 #get list of files on camera
                 #run gphoto function in separate process
                 p = Popen("gphoto2 -L ",shell=True,stdout=PIPE)
-                post_image_out = string.join(p.stdout.readlines())
+                pre_image_out = string.join(p.stdout.readlines())
                 
                 #wait for process to finish
                 p.wait()
+        
+                pre_image_list = pre_image_out.split("\n")
                 
-                if post_image_out == pre_image_out:
-                    continue
-                else:
-                    post_image_list = post_image_out.split("\n")
-                    
-                    #remove entries which existed before the image
-                    for line in pre_image_list:
-                        try:
-                            post_image_list.remove(line)
-                        except ValueError:
-                            continue
-                    
-                    #get number of files in active folder
-                    folder_filecount = 0
-                    for line in post_image_list:
-                        if line.lstrip().startswith("There"):
-                            words = line.split()
-                            active_folder = eval(words[len(words)-1].rstrip("."))
-                            try:
-                                folder_filecount = eval(words[2])
-                            except NameError:
-                                pass
-                    
-                    #if image has not been stored yet, then wait longer
-                    if folder_filecount == 0 and (get_raw or get_jpeg):
-                        continue
-                    elif get_raw and get_jpeg and folder_filecount == 2:
-                        flag = True
-                        continue
-                    elif (get_raw or get_jpeg) and folder_filecount == 1:
-                        flag = True
-                        continue
-                    elif not get_jpeg and not get_raw:
-                        flag = True
-                        continue
-            
-            if not flag:
-                raise RuntimeError,"Gphoto2 Error: Unable to download image(s)"
-            
-            #otherwise get the images
-            if get_raw or get_jpeg:
-                self.__settings_manager.set("output", "cameraManager> Downloading image(s)")
-                p = Popen("gphoto2 -P --folder="+active_folder+" --filename=\""+tmp_dir+"/"+time_of_capture.strftime(filename_format)+".%C\"",shell=True)
+                time_of_capture = datetime.datetime.now()
+                self.__settings_manager.set("output", "cameraManager> Capturing image.")
+                p = Popen("gphoto2 --capture-image ",shell=True)
                 p.wait()
-            
+                
                 if p.returncode != 0:
-                    raise RuntimeError,"Gphoto2 Error: Unable to download the image(s)"        
+                    raise RuntimeError, "Gphoto2 Error: Failed to capture image"
+                
+                #wait for the image to be stored for up to one minute
+                flag=False
+                while time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.now() and not flag:
+                    time.sleep(10)
+                    #get list of files on camera
+                    #run gphoto function in separate process
+                    p = Popen("gphoto2 -L ",shell=True,stdout=PIPE)
+                    post_image_out = string.join(p.stdout.readlines())
+                    
+                    #wait for process to finish
+                    p.wait()
+                    
+                    if post_image_out == pre_image_out:
+                        continue
+                    else:
+                        post_image_list = post_image_out.split("\n")
+                        
+                        #remove entries which existed before the image
+                        for line in pre_image_list:
+                            try:
+                                post_image_list.remove(line)
+                            except ValueError:
+                                continue
+                        
+                        #get number of files in active folder
+                        folder_filecount = 0
+                        for line in post_image_list:
+                            if line.lstrip().startswith("There"):
+                                words = line.split()
+                                active_folder = eval(words[len(words)-1].rstrip("."))
+                                try:
+                                    folder_filecount = eval(words[2])
+                                except NameError:
+                                    pass
+                        
+                        #if image has not been stored yet, then wait longer
+                        if folder_filecount == 0 and (get_raw or get_jpeg):
+                            continue
+                        elif get_raw and get_jpeg and folder_filecount == 2:
+                            flag = True
+                            continue
+                        elif (get_raw or get_jpeg) and folder_filecount == 1:
+                            flag = True
+                            continue
+                        elif not get_jpeg and not get_raw:
+                            flag = True
+                            continue
+                
+                if not flag:
+                    raise RuntimeError,"Gphoto2 Error: Unable to download image(s)"
+                
+                #otherwise get the images
+                if get_raw or get_jpeg:
+                    self.__settings_manager.set("output", "cameraManager> Downloading image(s)")
+                    p = Popen("gphoto2 -P --folder="+active_folder+" --filename=\""+glob_vars['tmp_dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
+                    p.wait()
+                
+                    if p.returncode != 0:
+                        raise RuntimeError,"Gphoto2 Error: Unable to download the image(s)"        
+                
+                #delete images from camera card
+                p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
+                p.wait()
+                
+                if p.returncode != 0:
+                    raise RuntimeError,"Gphoto2 Error: Unable to delete the image(s) from camera card" 
+                
+            finally:
+                self.__camera_lock.release()
             
-            #delete images from camera card
-            p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
-            p.wait()
+            new_images = {}
+            if get_raw:
+                new_images["NEF"] = glob_vars['tmp_dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".NEF"
+            if get_jpeg:
+                new_images["jpeg"] = glob_vars['tmp_dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".JPG"
             
-            if p.returncode != 0:
-                raise RuntimeError,"Gphoto2 Error: Unable to delete the image(s) from camera card" 
+            self.__settings_manager.set("most recent images",new_images)
             
-            self.__settings_manager.release("camera configs")
         finally:
-            self.__settings_manager.release("tmp dir")
-            self.__camera_lock.release()
-        
-        new_images = {}
-        if get_raw:
-            new_images["NEF"] = tmp_dir+"/"+time_of_capture.strftime(filename_format)+".NEF"
-        if get_jpeg:
-            new_images["jpeg"] = tmp_dir+"/"+time_of_capture.strftime(filename_format)+".JPG"
-        
-        self.__settings_manager.set("most recent images",new_images)
+            self.__settings_manager.release(glob_vars)
     
     ############################################################################################## 
     
     def updateConfigs(self):
-        camera_configs = self.__settings_manager.grab("camera configs")
-        capture_modes = self.__settings_manager.grab("capture modes")
-        ccm = capture_modes[self.__settings_manager.grab("current capture mode")]
+        #grab globals
+        glob_vars = self.__settings_manager.grab(["camera configs","capture modes","current capture mode"])
         
-        
-        iso = ccm["iso"]
-        f_number = ccm["f-number"]
-        exptime = ccm["exptime"]
-        imgsize = ccm["imgsize"]
-        whitebalance = ccm["whitebalance"]
-        focusmode = ccm["focusmode"]
-        
-        if iso != camera_configs['iso'].current:
-            self.setConfig('iso', str(iso))
-        
-        if f_number != camera_configs['f-number'].current:
-            self.setConfig('f-number',str(f_number))
-     
-        if exptime != camera_configs['exptime'].current:
-            self.setConfig('exptime',str(exptime ))
-        
-        if imgsize != camera_configs['imgsize'].current:
-            self.setConfig('imgsize', str(imgsize))
+        try:
+            #rename for clarity
+            camera_configs = glob_vars["camera configs"]
+            capture_modes = glob_vars["capture modes"]
+            ccm = glob_vars["current capture mode"]
             
-        if whitebalance != camera_configs['whitebalance'].current:
-            self.setConfig('whitebalance',str(whitebalance))
-        
-        if focusmode != camera_configs['focusmode'].current:
-            self.setConfig('focusmode', str(focusmode))
-        
-        self.__settings_manager.release("camera configs")
-        self.__settings_manager.release("current capture mode")
-        self.__settings_manager.release("capture modes")
+            
+            iso = ccm["iso"]
+            f_number = ccm["f-number"]
+            exptime = ccm["exptime"]
+            imgsize = ccm["imgsize"]
+            whitebalance = ccm["whitebalance"]
+            focusmode = ccm["focusmode"]
+            
+            if iso != camera_configs['iso'].current:
+                self.setConfig('iso', str(iso))
+            
+            if f_number != camera_configs['f-number'].current:
+                self.setConfig('f-number',str(f_number))
+         
+            if exptime != camera_configs['exptime'].current:
+                self.setConfig('exptime',str(exptime ))
+            
+            if imgsize != camera_configs['imgsize'].current:
+                self.setConfig('imgsize', str(imgsize))
+                
+            if whitebalance != camera_configs['whitebalance'].current:
+                self.setConfig('whitebalance',str(whitebalance))
+            
+            if focusmode != camera_configs['focusmode'].current:
+                self.setConfig('focusmode', str(focusmode))
+        finally:
+            self.__settings_manager.release(glob_vars)
         
     ##############################################################################################     
     
@@ -226,39 +232,52 @@ class cameraManager:
         
         self.__settings_manager.set("output","cameraManager> Setting "+name+" to "+value)
         
-        self.__camera_lock.acquire()
-        camera_configs = self.__settings_manager.grab("camera configs")    
+        #grab globals
+        glob_vars = self.__settings_manager.grab(["camera configs"])
         
-        config = camera_configs[name]
+        try:
+            self.__camera_lock.acquire()
+            
+            try:
+                camera_configs = glob_vars["camera configs"]    
+                
+                config = camera_configs[name]
+                
+                value_index = config.values[value]
+                
+                #run gphoto function in separate process
+                p = Popen("gphoto2 --set-config "+str(name)+"="+value_index,shell=True)
+                
+                #wait for process to finish
+                p.wait()
+                
+            finally:
+                self.__camera_lock.release()
+            
+            camera_configs[name].current = value
+    
+            self.__settings_manager.set("camera configs",camera_configs)
         
-        value_index = config.values[value]
-        
-        #run gphoto function in separate process
-        p = Popen("gphoto2 --set-config "+str(name)+"="+value_index,shell=True)
-        
-        #wait for process to finish
-        p.wait()
-        self.__camera_lock.release()
-        
-        camera_configs[name].current = value
-
-        self.__settings_manager.set("camera configs",camera_configs)
-        self.__settings_manager.release("camera configs")
+        finally:
+            self.__settings_manager.release(glob_vars)
         
     ##############################################################################################     
     
     def isConnected(self):
         self.__camera_lock.acquire()
         
-        #run gphoto function in separate process
-        p = Popen("gphoto2 --auto-detect",shell=True,stdout=PIPE,stderr=PIPE)
-        
-        out = string.join(p.stdout.readlines())
-        outerr = string.join(p.stderr.readlines())
-        
-        #wait for process to finish
-        p.wait()
-        self.__camera_lock.release()
+        try:
+            #run gphoto function in separate process
+            p = Popen("gphoto2 --auto-detect",shell=True,stdout=PIPE,stderr=PIPE)
+            
+            out = string.join(p.stdout.readlines())
+            outerr = string.join(p.stderr.readlines())
+            
+            #wait for process to finish
+            p.wait()
+            
+        finally:
+            self.__camera_lock.release()
         
         if p.returncode != 0:
             raise RuntimeError,"GPhoto2 Error: failed to auto detect\n"+outerr
@@ -282,15 +301,18 @@ class cameraManager:
         current_configs = {}
         self.__camera_lock.acquire()
         
-        #get list of possible configs for camera
-        #run gphoto function in separate process
-        p = Popen("gphoto2 --list-config",shell=True,stdout=PIPE)
+        try:
+            #get list of possible configs for camera
+            #run gphoto function in separate process
+            p = Popen("gphoto2 --list-config",shell=True,stdout=PIPE)
+            
+            out = string.join(p.stdout.readlines())
+            
+            #wait for process to finish
+            p.wait()
         
-        out = string.join(p.stdout.readlines())
-        
-        #wait for process to finish
-        p.wait()
-        self.__camera_lock.release()
+        finally:
+            self.__camera_lock.release()
         
         #split output into lines
         lines = out.split("\n")
@@ -317,13 +339,16 @@ class cameraManager:
         #get values for particular config
         self.__camera_lock.acquire()
         
-        #run gphoto function in separate process
-        p = Popen("gphoto2 --get-config "+name,shell=True,stdout=PIPE)
-        
-        out = string.join(p.stdout.readlines()) 
-        
-        p.wait()
-        self.__camera_lock.release()
+        try:
+            #run gphoto function in separate process
+            p = Popen("gphoto2 --get-config "+name,shell=True,stdout=PIPE)
+            
+            out = string.join(p.stdout.readlines()) 
+            
+            p.wait()
+            
+        finally:
+            self.__camera_lock.release()
         
         #split config values into lines
         config_lines = out.split("\n")
