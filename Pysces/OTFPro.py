@@ -42,7 +42,8 @@ class OTFPro:
         glob_vars = self.__settings_manager.grab(["most recent images","output folder"])
 
         try:
-            shutil.copy(glob_vars['most recent images']['JPEG'],glob_vars['output folder'] +"/Images/"+os.path.split(glob_vars['most recent images']['JPEG'])[1])
+            self.__settings_manager.set("output","OTFPro> Copying image out of tmp dir")
+            shutil.copy(glob_vars['most recent images']['jpeg'],glob_vars['output folder'] +"/Images/"+os.path.split(glob_vars['most recent images']['jpeg'])[1])
             
             for file in glob_vars['most recent images'].values():
                 os.remove(file)

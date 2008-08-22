@@ -66,7 +66,10 @@ def updateVariables(fp,ofp,line_no,settings):
         value = eval(value)
         
         #see if the value stored in memory is different
-        new_value = settings[key]
+        try:
+            new_value = settings[key]
+        except KeyError:
+            raise RuntimeError, "Settings file has been changed. The update attempt has been aborted"
         
         if new_value != value:    
             #change value in line
@@ -298,7 +301,11 @@ class settingsManager:
         variables = {}
         
         for name in names:
-            variables[name] = self.__variables[name]
+            #resolve any shell variables
+            if type(self.__variables[name]) == type(str()) and self.__variables[name].count("$") != 0:
+                variables[name] = os.path.expandvars(self.__variables[name])
+            else:
+                variables[name] = self.__variables[name]
 
         return variables
            
@@ -338,7 +345,7 @@ class settingsManager:
                 function(value)
         
         #release lock
-        self.release(name)
+        self.__locks[name].release()
         
     ##############################################################################################         
     
@@ -355,26 +362,25 @@ class settingsManager:
             if keys.count(key) > 1:
                 raise ValueError,"Group cannot contain duplicate entries"
             
-        #get the locks on all the variables in the group
-        for key in keys:
-            self.__locks[key].acquire()
+        #get the locks on all the variables in the group - use the grab method, to do this is a thread safe way
+        glob_vars = self.grab(keys)
         
-        #set all the values and build a set of the callbacks
-        unique_callbacks = set([])
-        for key in keys:
-            self.__variables[key] = group[key]
+        try:
+            #set all the values and build a set of the callbacks
+            unique_callbacks = set([])
+            for key in keys:
+                self.__variables[key] = group[key]
+                
+                for function in self.__callbacks[key]:
+                    if function != None:
+                        unique_callbacks.add(function)
             
-            for function in self.__callbacks[key]:
-                if function != None:
-                    unique_callbacks.add(function)
-        
-        #run unique callbacks
-        for function in unique_callbacks:
-            function()
-        
-        #release the locks
-        for key in keys:
-            self.release(key)
+            #run unique callbacks
+            for function in unique_callbacks:
+                function()
+        finally:
+            #release the locks
+            self.release(glob_vars)
             
     ##############################################################################################                 
      
@@ -426,91 +432,93 @@ class settingsManager:
         """
         Writes any changes to the settings file.
         """
-        #open current settings file for reading
-        with open(self.grab("Settings File"),'r') as fp:
-            self.release("Settings File")
+        glob_vars = self.grab(["Settings File"])
         
-           #open temporary file to write to
-            with open(self.grab("Settings File")+"-temp",'w') as ofp:
-                self.release("Settings File")
-                
-                #read file line by line
-                i=0
-                line = "not an empty string"
-                while line != "":
-                    line = fp.readline()
-                    i+=1 #incremement line count
-                    if line.isspace():
-                        #write blank lines
-                        ofp.write(line)
-                        continue
+        try:
+            #open current settings file for reading
+            with open(glob_vars["Settings File"],'r') as fp:
+            
+               #open temporary file to write to
+                with open(glob_vars["Settings File"]+"-temp",'w') as ofp:
                     
-                    elif line == "":
-                        #skip end of file
-                        continue
-                    
-                    elif line.lstrip().startswith("#"):
-                        #write comment lines
-                        ofp.write(line)
-                        continue
-                    
-                    elif line.lstrip().startswith("<variables>"):
-                        ofp.write(line)
-                        i=updateVariables(fp,ofp,i,self.__variables)
+                    #read file line by line
+                    i=0
+                    line = "not an empty string"
+                    while line != "":
+                        line = fp.readline()
+                        i+=1 #incremement line count
+                        if line.isspace():
+                            #write blank lines
+                            ofp.write(line)
+                            continue
                         
-                    elif line.lstrip().startswith("<capture mode>"):
-                        ofp.write(line)
-                        #record position in file of declaration
-                        dec_start = fp.tell()
+                        elif line == "":
+                            #skip end of file
+                            continue
                         
-                        #read declaration to see which capture mode this is
-                        capture_mode,j = readVariables(fp,i)
+                        elif line.lstrip().startswith("#"):
+                            #write comment lines
+                            ofp.write(line)
+                            continue
                         
-                        #go back to start of declaration
-                        fp.seek(dec_start)
+                        elif line.lstrip().startswith("<variables>"):
+                            ofp.write(line)
+                            i=updateVariables(fp,ofp,i,self.__variables)
+                            
+                        elif line.lstrip().startswith("<capture mode>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which capture mode this is, j is not used (unwanted line number)
+                            capture_mode,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["capture modes"][capture_mode["name"]])
+                            
+                        elif line.lstrip().startswith("<schedule>"):
+                            ofp.write(line)
+                            updateVariables(fp,ofp,i,self.__variables["schedule"])
                         
-                        #update file
-                        updateVariables(fp,ofp,i,self.__variables["capture modes"][capture_mode["name"]])
+                        elif line.lstrip().startswith("<output>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which output this is, j is not used (unwanted line number)
+                            output,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["output types"][output["name"]])
                         
-                    elif line.lstrip().startswith("<schedule>"):
-                        ofp.write(line)
-                        updateVariables(fp,ofp,i,self.__variables["schedule"])
-                    
-                    elif line.lstrip().startswith("<output>"):
-                        ofp.write(line)
-                        #record position in file of declaration
-                        dec_start = fp.tell()
-                        
-                        #read declaration to see which output this is
-                        output,j = readVariables(fp,i)
-                        
-                        #go back to start of declaration
-                        fp.seek(dec_start)
-                        
-                        #update file
-                        updateVariables(fp,ofp,i,self.__variables["output types"][output["name"]])
-                    
-                    elif line.lstrip().startswith("<image>"):
-                        ofp.write(line)
-                        #record position in file of declaration
-                        dec_start = fp.tell()
-                        
-                        #read declaration to see which image this is
-                        image,j = readVariables(fp,i)
-                        
-                        #go back to start of declaration
-                        fp.seek(dec_start)
-                        
-                        #update file
-                        updateVariables(fp,ofp,i,self.__variables["image types"][image["image_type"]])
-                        
-                    else:
-                        raise ValueError,"Unable to update settings file. Error on line "+str(i)    
-
-        #move teporary file to settings file
-        filename = self.grab("Settings File")
-        os.rename(filename+"-temp", filename)
-        self.release("Settings File")
+                        elif line.lstrip().startswith("<image>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which image this is, j is not used (unwanted line number)
+                            image,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["image types"][image["image_type"]])
+                            
+                        else:
+                            raise ValueError,"Unable to update settings file. Error on line "+str(i)    
+    
+            #move teporary file to settings file
+            os.rename(glob_vars["Settings File"]+"-temp", glob_vars["Settings File"])
+            
+        finally:
+            self.release(glob_vars)
                    
     ##############################################################################################           
 ##############################################################################################           

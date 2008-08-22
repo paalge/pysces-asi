@@ -19,7 +19,7 @@ class dailyPro:
             glob_vars = self.__settings_manager.grab(['day'])
             
             try:
-                if current_day != day:
+                if current_day != glob_vars['day']:
                     self.__settings_manager.set("day",current_day)
             finally:
                 self.__settings_manager.release(glob_vars)

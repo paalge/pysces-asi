@@ -1,8 +1,23 @@
+"""
+The cameraManager module provides a cameraManager and cameraConfig classes for the complete control of the 
+camera. This includes image capture, image download and settings updates.
+
+This module could really do with more development work - it is far too specialised at the moment.
+"""
+
 from subprocess import Popen,PIPE
 from threading import Lock
 import string,datetime,time
 
 class cameraManager:
+    """
+    Class responsible for controlling the camera. This class is restricted to gphoto2 compatible cameras
+    which can capture "NEF" and "jpeg" type images.
+    
+    It would be much better if this was re-written to make it more flexible - sub-classing is required here!
+    
+    """
+    
     def __init__(self,settings_manager):
         self.__settings_manager = settings_manager
         self.__camera_lock = Lock()
@@ -15,14 +30,15 @@ class cameraManager:
         try:
             self.__settings_manager.create("camera configs",{})
         except ValueError:
+            #if the camera configs variable already exists then we will just overwrite it
             pass
         
+        self.__settings_manager.set("output","cameraManager> Downloading settings from camera - please wait")
         self.__settings_manager.set("camera configs", self.__getCameraConfigs())
         
         
         #set callbacks for camera configs
-        self.__settings_manager.register("current capture mode",self.updateConfigs)
-        
+        self.__settings_manager.register("current capture mode",self.updateConfigs)        
         self.__settings_manager.register("current capture mode",self.updateImgs)
         
         
@@ -67,6 +83,12 @@ class cameraManager:
     ##############################################################################################         
     
     def captureImage(self):
+        """
+        Takes a photo, downloads it to the tmp directory with a filename as specified in the settings
+        file and then wipes the camera card. It is also responsible for updating the "most recent images"
+        variable. This must be set to dictionary {image type : image filename} containing all the images
+        captured. Note that setting this variable causes the on-the-fly processing to be run (via a callback)
+        """
         
         #grab globals
         glob_vars = self.__settings_manager.grab(["camera configs","tmp dir","filename_format"])
@@ -152,6 +174,22 @@ class cameraManager:
                         elif not get_jpeg and not get_raw:
                             flag = True
                             continue
+                        elif (get_raw and get_jpeg) and (folder_filecount > 2):
+                            #this means that the camera card probably wasn't blank to start with - which is a tricky problem!
+                            #The easiest way around this is to wipe the card and accept that we will lose the photo(s)
+                            #that have just been taken
+                            self.__settings_manager.set("output","cameraManager> Error! Camera card was not blank!")
+                            self.__settings_manager.set("output","cameraManager> Deleting all images from camera.")
+                            p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
+                            p.wait()
+                            return
+                        elif (get_raw or get_jpeg) and folder_filecount > 1:
+                            #as above but when we are only taking one type of image
+                            self.__settings_manager.set("output","cameraManager> Error! Camera card was not blank!")
+                            self.__settings_manager.set("output","cameraManager> Deleting all images from camera.")
+                            p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
+                            p.wait()
+                            return
                 
                 if not flag:
                     raise RuntimeError,"Gphoto2 Error: Unable to download image(s)"
@@ -159,13 +197,14 @@ class cameraManager:
                 #otherwise get the images
                 if get_raw or get_jpeg:
                     self.__settings_manager.set("output", "cameraManager> Downloading image(s)")
-                    p = Popen("gphoto2 -P --folder="+active_folder+" --filename=\""+glob_vars['tmp_dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
+                    p = Popen("gphoto2 -P --folder="+active_folder+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
                     p.wait()
                 
                     if p.returncode != 0:
                         raise RuntimeError,"Gphoto2 Error: Unable to download the image(s)"        
                 
                 #delete images from camera card
+                self.__settings_manager.set("output", "cameraManager> Deleting images from camera.")
                 p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
                 p.wait()
                 
@@ -177,9 +216,9 @@ class cameraManager:
             
             new_images = {}
             if get_raw:
-                new_images["NEF"] = glob_vars['tmp_dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".NEF"
+                new_images["NEF"] = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".NEF"
             if get_jpeg:
-                new_images["jpeg"] = glob_vars['tmp_dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".JPG"
+                new_images["jpeg"] = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".JPG"
             
             self.__settings_manager.set("most recent images",new_images)
             
@@ -196,7 +235,7 @@ class cameraManager:
             #rename for clarity
             camera_configs = glob_vars["camera configs"]
             capture_modes = glob_vars["capture modes"]
-            ccm = glob_vars["current capture mode"]
+            ccm = capture_modes[glob_vars["current capture mode"]]
             
             
             iso = ccm["iso"]
@@ -293,11 +332,18 @@ class cameraManager:
     ##############################################################################################            
     
     def exit(self):
+        """
+        Runs any tidy-up processes associated with the cameraManager and returns.
+        """
         return
     
     ##############################################################################################            
     
     def __getCameraConfigs(self):
+        """
+        Returns a dictionary containing cameraConfig objects for all of the possible camera configs.
+        The keys are the short names of the configs.
+        """
         current_configs = {}
         self.__camera_lock.acquire()
         
@@ -319,7 +365,6 @@ class cameraManager:
         
         for config in lines:
             #skip blank lines
-
             if config.isspace() or config == "":
                 continue
             
@@ -334,6 +379,12 @@ class cameraManager:
     ############################################################################################## 
     
     def getConfig(self,name):
+        """
+        Wrapper function for gphoto2's --get-config function. Returns a cameraConfig object.
+        The name argument should be a string specifying the name of the config, e.g. "exptime"
+        """
+        
+        
         values = {}
         
         #get values for particular config
@@ -382,6 +433,12 @@ class cameraManager:
      ##############################################################################################   
 
 class cameraConfig:
+    """
+    Storage class for camera configs. These relate to the information returned by Gphoto2 --get-config.
+    label = short name of config
+    current = current setting on camera
+    values = list of possible values for the config
+    """
     def __init__(self,label,current,values):
         self.label = label
         self.current = current

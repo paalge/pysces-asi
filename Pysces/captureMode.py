@@ -1,15 +1,12 @@
-import OTFPro
 import threading,datetime,time
 
 class captureMode:
     
-    def __init__(self,settings,settings_manager,camera_manager):
-        self.__settings = settings
-        self.__settings_manager = settings_manager
+    def __init__(self,settings,camera_manager):
+        self.__settings = settings #dictionary of capture mode settings (read from the settings file) these completly define the capture mode
         self.__camera_manager = camera_manager
         self.__stay_alive = False
         self.__running = False
-        self.__OTFPro = OTFPro.OTFPro(self.__settings_manager)
         self.__capture_thread = None
 
     ##############################################################################################
@@ -35,14 +32,11 @@ class captureMode:
     def __run(self):
         while self.__stay_alive:
             start_time = datetime.datetime.now()
+            
             #capture image
             self.__camera_manager.captureImage()
             
-            #run OTFPro thread
-            #self.__OTFPro.start()
-            
             #wait remaining delay time
-            print "Entering wait loop"
             while self.__stay_alive and datetime.datetime.now() - start_time < datetime.timedelta(seconds=self.__settings["delay"]):
                 time.sleep(0.5)
                 
@@ -60,9 +54,4 @@ class captureMode:
         self.__running = False
         
     ##############################################################################################    
-
-    def waitForOTF(self):
-        self.__OTFPro.join()
-        
-    ##############################################################################################
 ##############################################################################################    

@@ -99,8 +99,7 @@ class hostManager:
             return
         
         glob_vars = self.__settings_manager.grab(["tmp dir","output folder"])
-        old_tmp_dir = self.__settings_manager.grab("tmp dir")
-        output_folder = self.__settings_manager.grab("output folder")
+
         
         try:
             #if the new tmp dir is the same as the old one and still exists then return
