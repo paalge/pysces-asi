@@ -9,7 +9,6 @@ from __future__ import with_statement
 import threading,os,time
 import persist
 
-
 ##############################################################################################
 
 def updateVariables(fp,ofp,line_no,settings):
@@ -227,7 +226,7 @@ class settingsManager:
     It also deals with updating the settings file when the program exits.
     """
     def __init__(self):
-        
+
         #define private attributes
         self.__variables = {}
         self.__callbacks = {}
@@ -241,7 +240,8 @@ class settingsManager:
         self.create("most recent images","")
         self.create("output","")
         self.create("persist names",[])
-        self.create("day","")       
+        self.create("day","")
+        self.create("Capture Time","")       
         
         #load settings file
         glob_vars = self.grab(['Settings File'])
@@ -522,6 +522,6 @@ class settingsManager:
                    
     ##############################################################################################           
 ##############################################################################################           
-        
+  
         
            
