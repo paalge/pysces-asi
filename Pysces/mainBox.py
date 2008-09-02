@@ -8,7 +8,9 @@ class mainBox:
         self.__running = False
         
         #create settings manger
-        self.__settings_manager = settingsManager.settingsManager()
+        manager = settingsManager.sharedSettings()
+        manager.start()
+        self.__settings_manager = manager.sharedSettingsManager()
         
         #create camera manager
         self.__camera_manager = cameraManager.cameraManager(self.__settings_manager)

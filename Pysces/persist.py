@@ -10,17 +10,14 @@ class persistantStorage():
         self.__settings = settings_manager
         
         #get globals
-        glob_vars = self.__settings.grab(["persist filename"])
+        glob_vars = self.__settings.get(["persist filename"])
         
-        try:        
-            try:
-                with open(glob_vars["persist filename"],"r") as fp:
-                    self.__data = cPickle.load(fp)
-            except IOError:
-                self.__data = {}
-        finally:
-            #ensure that all locks are released
-            self.__settings.release(glob_vars)
+      
+        try:
+            with open(glob_vars["persist filename"],"r") as fp:
+                self.__data = cPickle.load(fp)
+        except IOError:
+            self.__data = {}
         
     ##############################################################################################
         
@@ -31,26 +28,21 @@ class persistantStorage():
     
     def exit(self):
         #get globals
-        initial_glob_vars = self.__settings.grab(["persist names","persist filename"])
+        initial_glob_vars = self.__settings.get(["persist names","persist filename"])
         
-        try:
         #get more global variables based on value of persist names
-            glob_vars = self.__settings.grab(["persist names","persist filename"]+initial_glob_vars["persist names"])
-        finally:
-            self.__settings.release(initial_glob_vars)   
+        glob_vars = self.__settings.get(["persist names","persist filename"]+initial_glob_vars["persist names"])
+ 
         
-        try:
-            #syncronise data with settings manager
-            for key in glob_vars["persist names"]:
-                self.__data[key] = glob_vars[key]
 
-            #save data
-            with open(glob_vars["persist filename"],"w") as fp:
-                cPickle.dump(self.__data,fp)
-                
-        finally:
-            #ensure that all locks are released
-            self.__settings.release(glob_vars)
+        #syncronise data with settings manager
+        for key in glob_vars["persist names"]:
+            self.__data[key] = glob_vars[key]
+
+        #save data
+        with open(glob_vars["persist filename"],"w") as fp:
+            cPickle.dump(self.__data,fp)
+
             
     ##############################################################################################
 ##############################################################################################

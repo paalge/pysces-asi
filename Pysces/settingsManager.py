@@ -6,10 +6,285 @@ in addition to the settingsManager class.
 
 
 from __future__ import with_statement
-import threading,os,time
+import os,time
 import persist
+from task import Task,taskQueueBase
 
-##############################################################################################
+        
+class settingsManager(taskQueueBase):
+    """
+    The settingsManager class is in charge of all global variables used in Pysces. It allocates
+    locks for threadsafe variable access, and runs callback functions when variables are changed.
+    It also deals with updating the settings file when the program exits.
+    """
+    def __init__(self):
+        
+        taskQueueBase.__init__(self)
+        
+        #define private attributes
+        self.__variables = {}
+        self.__callbacks = {}
+        
+        #hard code file locations and create variables
+        home = os.path.expanduser("~")
+        self.__create("Settings File",home+"/.Pysces/settings.txt")
+        self.__create("persist filename",home+"/.Pysces/persistant")
+        self.__create("current capture mode","")
+        self.__create("most recent images","")
+        self.__create("output","")
+        self.__create("persist names",[])
+        self.__create("day","")
+        self.__create("Capture Time","")       
+        
+        #load settings file
+        settings = loadSettingsFile(home+"/.Pysces/settings.txt")
+             
+        #store settings in variables
+        for key in settings.keys():
+            self.__create(key,settings[key])
+                    
+        #create persistant storage class
+        self.__persistant_storage = persist.persistantStorage(self)
+        
+        #load persistant values into variables
+        persistant_data = self.__persistant_storage.getPersistantData()
+        
+        for key in persistant_data.keys():
+            self.__create(key,persistant_data[key],persistant=True)
+            
+    ##############################################################################################      
+    #define public methods - note that the settingsManager worker thread does not have ownership of these
+    #methods, and so private methods MUST NOT call them - this will lead to thread lock
+    
+    def exit(self):
+        """
+        Updates the settings file and kills the persistant storage class.
+        """
+        #kill the persistant storage
+        self.__persistant_storage.exit()
+        
+        #update the settings file
+        self.set("output", "settingsManager> Updating settings file")
+        self.__updateSettingsFile()
+        taskQueueBase.exit()
+            
+    ##############################################################################################     
+    
+    def get(self,names):
+        #create task
+        task = Task(self.__get,names)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+    
+    ##############################################################################################      
+    
+    def set(self,variables):
+        #check that variables is a list or tuple
+        if type(variables) != type(dict()):
+            raise TypeError,"Expecting dictionary containing name:value pairs"
+        
+        #create task
+        task = Task(self.__set,variables)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+    
+    ############################################################################################## 
+     
+    def register(self,name,callback):
+        #create task
+        task = Task(self.__register,name,callback)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()   
+             
+    ############################################################################################## 
+    
+    def create(self,name,value,persistant=False):
+        #create task
+        task = Task(self.__create,name,value,persistant=persistant)
+        
+         #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+              
+    ##############################################################################################           
+    
+    #define private methods - these are only executed by the settingsManager worker thread and the 
+    #thread that calls __init__
+    
+    def __get(self,names):
+        result={}
+        for name in names:
+            result[name] = self.__variables[name]
+        
+        return result
+    
+    ##############################################################################################           
+       
+    def __set(self,group):
+        """
+        Sets a group of variables. If a callback is registered for more than one variable in the 
+        group it is only executed once. The group argument should be a dictionary of name:value 
+        pairs.
+        """
+        
+        #check there are no duplicate entries in the group
+        keys = group.keys()
+        for key in keys:
+            if keys.count(key) > 1:
+                raise ValueError,"Group cannot contain duplicate entries"
+        
+
+        #set all the values and build a set of the callbacks
+        unique_callbacks = set([])
+        for key in keys:
+            self.__variables[key] = group[key]
+            
+            for function in self.__callbacks[key]:
+                if function != None:
+                    unique_callbacks.add(function)
+        
+        #run unique callbacks
+        for function in unique_callbacks:
+            function()
+            
+    ##############################################################################################     
+    
+    def __register(self,name, callback):
+        """
+        Registers a callback function for a variable. This will be called whenever the variable is set.
+        The function will be called without any arguments, unless name = "output" in which case the 
+        function will be called with the new value of "output" as an argument.
+        """
+        self.__callbacks[name].append(callback)
+        
+    ##############################################################################################                      
+    
+    def __create(self,name,value,persistant=False):
+        """
+        Creates a new variable. If persistant=True, then the variable value will survive program restart
+        even if it is not in the settings file. Variables which are in the settings file should not be
+        created as persistant.
+        """
+        if self.__variables.has_key(name):
+            raise ValueError,"A variable called "+name+" already exists."
+        
+        self.__variables[name] = value
+        self.__callbacks[name] = []
+        
+        if persistant:
+            self.__variables["persist names"].append(name)
+
+            
+    ##############################################################################################
+    
+    def __updateSettingsFile(self):
+        """
+        Writes any changes to the settings file.
+        """
+        glob_vars = self.grab(["Settings File"])
+        
+        try:
+            #open current settings file for reading
+            with open(glob_vars["Settings File"],'r') as fp:
+            
+               #open temporary file to write to
+                with open(glob_vars["Settings File"]+"-temp",'w') as ofp:
+                    
+                    #read file line by line
+                    i=0
+                    line = "not an empty string"
+                    while line != "":
+                        line = fp.readline()
+                        i+=1 #incremement line count
+                        if line.isspace():
+                            #write blank lines
+                            ofp.write(line)
+                            continue
+                        
+                        elif line == "":
+                            #skip end of file
+                            continue
+                        
+                        elif line.lstrip().startswith("#"):
+                            #write comment lines
+                            ofp.write(line)
+                            continue
+                        
+                        elif line.lstrip().startswith("<variables>"):
+                            ofp.write(line)
+                            i=updateVariables(fp,ofp,i,self.__variables)
+                            
+                        elif line.lstrip().startswith("<capture mode>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which capture mode this is, j is not used (unwanted line number)
+                            capture_mode,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["capture modes"][capture_mode["name"]])
+                            
+                        elif line.lstrip().startswith("<schedule>"):
+                            ofp.write(line)
+                            updateVariables(fp,ofp,i,self.__variables["schedule"])
+                        
+                        elif line.lstrip().startswith("<output>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which output this is, j is not used (unwanted line number)
+                            output,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["output types"][output["name"]])
+                        
+                        elif line.lstrip().startswith("<image>"):
+                            ofp.write(line)
+                            #record position in file of declaration
+                            dec_start = fp.tell()
+                            
+                            #read declaration to see which image this is, j is not used (unwanted line number)
+                            image,j = readVariables(fp,i)
+                            
+                            #go back to start of declaration
+                            fp.seek(dec_start)
+                            
+                            #update file
+                            updateVariables(fp,ofp,i,self.__variables["image types"][image["image_type"]])
+                            
+                        else:
+                            raise ValueError,"Unable to update settings file. Error on line "+str(i)    
+    
+            #move teporary file to settings file
+            os.rename(glob_vars["Settings File"]+"-temp", glob_vars["Settings File"])
+            
+        finally:
+            self.release(glob_vars)
+                   
+    ##############################################################################################           
+##############################################################################################           
 
 def updateVariables(fp,ofp,line_no,settings):
     """
@@ -217,311 +492,5 @@ def loadSettingsFile(filename):
 
     return settings
 
-##############################################################################################
-        
-class settingsManager:
-    """
-    The settingsManager class is in charge of all global variables used in Pysces. It allocates
-    locks for threadsafe variable access, and runs callback functions when variables are changed.
-    It also deals with updating the settings file when the program exits.
-    """
-    def __init__(self):
-
-        #define private attributes
-        self.__variables = {}
-        self.__callbacks = {}
-        self.__locks = {}
-        
-        #hard code file locations
-        home = os.path.expanduser("~")
-        self.create("Settings File",home+"/.Pysces/settings.txt")
-        self.create("persist filename",home+"/.Pysces/persistant")
-        self.create("current capture mode","")
-        self.create("most recent images","")
-        self.create("output","")
-        self.create("persist names",[])
-        self.create("day","")
-        self.create("Capture Time","")       
-        
-        #load settings file
-        glob_vars = self.grab(['Settings File'])
-        settings = loadSettingsFile(glob_vars['Settings File'])
-        self.release(glob_vars)       
-        
-        #store settings in variables
-        for key in settings.keys():
-            self.create(key,settings[key])
-                    
-        #create persistant storage class
-        self.__persistant_storage = persist.persistantStorage(self)
-        
-        #load persistant values into variables
-        persistant_data = self.__persistant_storage.getPersistantData()
-        
-        for key in persistant_data.keys():
-            self.create(key,persistant_data[key],persistant=True)
-            
-    ##############################################################################################      
-    
-    def grab(self,names):
-        """
-        Acquires the locks on a set of variables specified by a list of names and returns a dictionary
-        containing the variables. If not all of the locks can be acquired, then they will all be released,
-        and the function will try again. Hopefully this will solve all thread locking issues!
-        """
-        #check that a list was passed
-        if type(names) != type(list()):
-            raise TypeError, "Expecting a list of variable names"
-        
-        grabbed = False
-        acquired_locks=[]
-        
-        #enter loop to keep trying to lock variables
-        while not grabbed: 
-            for name in names:
-                #attempt to acquire lock, but don't block 
-                if self.__locks[name].acquire(blocking=False):
-                    #add variable name to the listed of locked variables
-                    acquired_locks.append(name)
-            
-            #check if all the locks were acquired
-            if len(acquired_locks) == len(names):
-                grabbed = True
-            else:
-                #release all the locks
-                for name in acquired_locks:
-                    self.__locks[name].release()
-                
-                acquired_locks =[]    
-                
-                #sleep for a small amount of time
-                time.sleep(0.001)
-        
-        #build a dictionary of the variables
-        variables = {}
-        
-        for name in names:
-            #resolve any shell variables
-            if type(self.__variables[name]) == type(str()) and self.__variables[name].count("$") != 0:
-                variables[name] = os.path.expandvars(self.__variables[name])
-            else:
-                variables[name] = self.__variables[name]
-
-        return variables
-           
-    ##############################################################################################  
-          
-    def release(self,variables):
-        """
-        Releases the locks on the variables in the dictionary 'variables'.
-        """   
-        #check type
-        if type(variables) != type(dict()):
-            raise TypeError, "Expecting a dictionary of name:value pairs"
-        
-        #release locks
-        for name in variables.keys():
-            self.__locks[name].release()
-        
-    ##############################################################################################  
-          
-    def set(self,name,value):
-        """
-        Sets the value of a variable and runs all callback functions associated with it. The variable
-        remains locked whilst the callbacks are run.
-        """
-        
-        #get the lock
-        self.__locks[name].acquire()
-        
-        #set the new value
-        self.__variables[name] = value
-        
-        #run the callback functions
-        for function in self.__callbacks[name]:
-            if function != None and name != "output":
-                function()
-            elif name == "output":
-                function(value)
-        
-        #release lock
-        self.__locks[name].release()
-        
-    ##############################################################################################         
-    
-    def setGroup(self,group):
-        """
-        Sets a group of variables. If a callback is registered for more than one variable in the 
-        group it is only executed once. The group argument should be a dictionary of name:value 
-        pairs.
-        """
-        
-        #check there are no duplicate entries in the group
-        keys = group.keys()
-        for key in keys:
-            if keys.count(key) > 1:
-                raise ValueError,"Group cannot contain duplicate entries"
-            
-        #get the locks on all the variables in the group - use the grab method, to do this is a thread safe way
-        glob_vars = self.grab(keys)
-        
-        try:
-            #set all the values and build a set of the callbacks
-            unique_callbacks = set([])
-            for key in keys:
-                self.__variables[key] = group[key]
-                
-                for function in self.__callbacks[key]:
-                    if function != None:
-                        unique_callbacks.add(function)
-            
-            #run unique callbacks
-            for function in unique_callbacks:
-                function()
-        finally:
-            #release the locks
-            self.release(glob_vars)
-            
-    ##############################################################################################                 
-     
-    def exit(self):
-        """
-        Updates the settings file and kills the persistant storage class.
-        """
-        #kill the persistant storage
-        self.__persistant_storage.exit()
-        
-        #update the settings file
-        self.set("output", "settingsManager> Updating settings file")
-        self.__updateSettingsFile()
-        self.set("output", "Pysces> Stopped!")
-            
-    ##############################################################################################     
-    
-    def register(self,name, callback):
-        """
-        Registers a callback function for a variable. This will be called whenever the variable is set.
-        The function will be called without any arguments, unless name = "output" in which case the 
-        function will be called with the new value of "output" as an argument.
-        """
-        self.__callbacks[name].append(callback)
-        
-    ##############################################################################################                      
-    
-    def create(self,name,value,persistant=False):
-        """
-        Creates a new variable. If persistant=True, then the variable value will survive program restart
-        even if it is not in the settings file. Variables which are in the settings file should not be
-        created as persistant.
-        """
-        if self.__variables.has_key(name):
-            raise ValueError,"A variable called "+name+" already exists."
-        
-        self.__variables[name] = value
-        self.__locks[name] = threading.RLock()
-        self.__callbacks[name] = []
-        
-        if persistant:
-            self.__locks["persist names"].acquire()
-            self.__variables["persist names"].append(name)
-            self.__locks["persist names"].release()
-            
-    ##############################################################################################
-    
-    def __updateSettingsFile(self):
-        """
-        Writes any changes to the settings file.
-        """
-        glob_vars = self.grab(["Settings File"])
-        
-        try:
-            #open current settings file for reading
-            with open(glob_vars["Settings File"],'r') as fp:
-            
-               #open temporary file to write to
-                with open(glob_vars["Settings File"]+"-temp",'w') as ofp:
-                    
-                    #read file line by line
-                    i=0
-                    line = "not an empty string"
-                    while line != "":
-                        line = fp.readline()
-                        i+=1 #incremement line count
-                        if line.isspace():
-                            #write blank lines
-                            ofp.write(line)
-                            continue
-                        
-                        elif line == "":
-                            #skip end of file
-                            continue
-                        
-                        elif line.lstrip().startswith("#"):
-                            #write comment lines
-                            ofp.write(line)
-                            continue
-                        
-                        elif line.lstrip().startswith("<variables>"):
-                            ofp.write(line)
-                            i=updateVariables(fp,ofp,i,self.__variables)
-                            
-                        elif line.lstrip().startswith("<capture mode>"):
-                            ofp.write(line)
-                            #record position in file of declaration
-                            dec_start = fp.tell()
-                            
-                            #read declaration to see which capture mode this is, j is not used (unwanted line number)
-                            capture_mode,j = readVariables(fp,i)
-                            
-                            #go back to start of declaration
-                            fp.seek(dec_start)
-                            
-                            #update file
-                            updateVariables(fp,ofp,i,self.__variables["capture modes"][capture_mode["name"]])
-                            
-                        elif line.lstrip().startswith("<schedule>"):
-                            ofp.write(line)
-                            updateVariables(fp,ofp,i,self.__variables["schedule"])
-                        
-                        elif line.lstrip().startswith("<output>"):
-                            ofp.write(line)
-                            #record position in file of declaration
-                            dec_start = fp.tell()
-                            
-                            #read declaration to see which output this is, j is not used (unwanted line number)
-                            output,j = readVariables(fp,i)
-                            
-                            #go back to start of declaration
-                            fp.seek(dec_start)
-                            
-                            #update file
-                            updateVariables(fp,ofp,i,self.__variables["output types"][output["name"]])
-                        
-                        elif line.lstrip().startswith("<image>"):
-                            ofp.write(line)
-                            #record position in file of declaration
-                            dec_start = fp.tell()
-                            
-                            #read declaration to see which image this is, j is not used (unwanted line number)
-                            image,j = readVariables(fp,i)
-                            
-                            #go back to start of declaration
-                            fp.seek(dec_start)
-                            
-                            #update file
-                            updateVariables(fp,ofp,i,self.__variables["image types"][image["image_type"]])
-                            
-                        else:
-                            raise ValueError,"Unable to update settings file. Error on line "+str(i)    
-    
-            #move teporary file to settings file
-            os.rename(glob_vars["Settings File"]+"-temp", glob_vars["Settings File"])
-            
-        finally:
-            self.release(glob_vars)
-                   
-    ##############################################################################################           
-##############################################################################################           
-  
-        
+##############################################################################################        
            

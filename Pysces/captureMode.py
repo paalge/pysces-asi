@@ -18,8 +18,8 @@ class captureMode:
         self.__stay_alive = True
         self.__running = True
         
-        #set global variables for this capture mode - callback functions will ensure that the camera is setup
-        #self.__settings_manager.setGroup(self.__settings)
+        #the settings on the camera are updated via a callback function, the settings being read from the
+        #capture modes global variable.
         
         #create capture thread
         self.__capture_thread = threading.Thread(target=self.__run,args=())
