@@ -9,14 +9,18 @@ class task:
         self.__kwargs = kwargs
         self.__return_value = None
         self.__completed = Event()
+        self.__exception = None
         
     def execute(self):
         """
         Executes the task.
         """
-        #run the function
-        self.__return_value = self.__function(*self.__args,**self.__kwargs)
-        
+        #try to run the function. If it fails then store the exception object to pass to outside thread
+        try:
+            self.__return_value = self.__function(*self.__args,**self.__kwargs)
+        except Exception,self.__exception:
+            pass
+            
         #set the event to true, to show that the task is finished
         self.__completed.set()
         
@@ -26,7 +30,10 @@ class task:
         then None is returned when the task is completed.
         """
         self.__completed.wait()
-        return self.__return_value
+        if self.__exception == None:
+            return self.__return_value
+        else:
+            raise self.__exception
     
 def Task(func,*args,**kwargs):
     return task(func,*args,**kwargs)
@@ -58,12 +65,15 @@ class taskQueueBase:
         #only queue task if should be alive - tasks submitted after exit is encountered will be ignored
         if self.__stay_alive:
             self.__task_queue.put(task)
-    
-    
+       
     def exit(self):
-        self.__stay_alive = False
+        task = Task(self.__exit)
+        self.commitTask(task)
         
         #block until outstanding tasks have been completed
         self.__worker_thread.join()
         
         self.__running = False
+    
+    def __exit(self):
+        self.__stay_alive = False

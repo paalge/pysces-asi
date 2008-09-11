@@ -9,7 +9,6 @@ class hostManager:
         self.__removal_thread=None
         self.__settings_manager = settings_manager
         self.__running = False
-        self.__network_manager = networkManager.networkManager(self.__settings_manager)
         
         #create variables
         settings_manager.create("output folder","")
@@ -38,7 +37,7 @@ class hostManager:
         glob_vars = self.__settings_manager.grab(["folder_on_host","year_folder_format","month_folder_format","day_folder_format","capture modes","output types","current capture mode"])
         
         try:
-            today = datetime.datetime.now()
+            today = datetime.datetime.utcnow()
             folders=[glob_vars['folder_on_host']]
             
             for format in [glob_vars['year_folder_format'],glob_vars['month_folder_format'],glob_vars['day_folder_format']]: 
