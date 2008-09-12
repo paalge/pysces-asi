@@ -7,7 +7,7 @@ import unittest
 import doctest
 
 #list of all modules in the Pysces package to be tested 
-modules_to_doctest = ["settingsManager"]
+modules_to_doctest = ["settingsManager","captureManager"]
 
 suite = unittest.TestSuite()
 for mod in modules_to_doctest:

@@ -2,7 +2,6 @@
 The cameraManager module provides a cameraManager and cameraConfig classes for the complete control of the 
 camera. This includes image capture, image download and settings updates.
 
-This module could really do with more development work - it is far too specialised at the moment.
 """
 
 from subprocess import Popen,PIPE
@@ -54,6 +53,11 @@ class cameraManagerBase(taskQueueBase):
     ############################################################################################## 
         
     def getCameraConfigs(self):
+        """
+        Returns the camera configs stored in the camera manager - these should be the up-to-date
+        configs.
+        """
+        
         task = Task(self.camera_configs.copy)
         
         #submit task

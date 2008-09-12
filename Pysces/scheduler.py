@@ -32,8 +32,8 @@ class scheduler:
     The scheduler class is responsible for selecting and then running the correct capture mode.
     The selection is made by evaluating the tests defined in the schedule (in the settings file).
     """
-    def __init__(self,settings_manager,camera_manager):
-        self.__camera_manager = camera_manager
+    def __init__(self,settings_manager):
+
         self.__settings_manager = settings_manager
         self.__running = False
         self.__current_capture_mode = None
@@ -65,15 +65,11 @@ class scheduler:
         #work out which capture mode should be running now
         while self.__running:
             
-            #update the day variable (causing the directory structure to be updated)
-            self.__updateDay()
-            
             #find out which capture mode should be running now
             capture_mode_to_run = self.__evaluateSchedule()
             
             if capture_mode_to_run != self.__current_capture_mode:
-                
-            
+                #the capture mode has changed and should be updated
                 if eval(test) and capture_mode != current_mode_name:
                     
                     if current_mode_name != None:

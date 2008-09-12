@@ -8,7 +8,7 @@ in addition to the settingsManager class.
 from __future__ import with_statement
 import os,time
 import persist
-from task import Task,taskQueueBase
+from multitask import Task,taskQueueBase
 
         
 class settingsManager(taskQueueBase):
