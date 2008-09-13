@@ -1,6 +1,19 @@
 import threading,datetime,time
 
 class captureMode:
+    def __init__(self,settings):
+        for name,value in settings.items():
+            if name == "name":
+                self.name = value
+            elif name == "delay":
+                self.delay = value
+            elif name == "outputs":
+                self.outputs = value
+            else:
+                self.camera_settings[name] = value
+
+
+class captureMode:
     
     def __init__(self,settings,camera_manager):
         self.__settings = settings #dictionary of capture mode settings (read from the settings file) these completly define the capture mode

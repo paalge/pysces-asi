@@ -3,19 +3,19 @@ The output module defines the different outputs that can be created using Pysces
 It provides the interface between Pysces and PASKIL
 """
 from task import taskQueueBase
-
+import processing
 #List of all supported types of outputs
-TYPES = ["raw","image","quicklook","keogram","map"]
+#TYPES = ["raw","image","quicklook","keogram","map"]
 
 #dictionary matching processing functions to output type
-FUNCTIONS = {"raw":copyImage,"image":saveAllskyImage}
+#FUNCTIONS = {"raw":copyImage,"image":saveAllskyImage}
 
 #dictionary matching types to all the settings that must be specified for them
-REQUIRED_SETTINGS = {"all":["name","type","image_type","save_on_host","filename_suffix","file_on_server"],
-                     "raw":[],
-                     "quicklook":[],
-                     "map":["projection_height","background_colour"]
-                     }
+#REQUIRED_SETTINGS = {"all":["name","type","image_type","save_on_host","filename_suffix","file_on_server"],
+#                     "raw":[],
+ #                    "quicklook":[],
+  #                   "map":["projection_height","background_colour"]
+ #                    }
 
 
 
@@ -29,8 +29,8 @@ class outputTaskHandler(taskQueueBase):
         self.__processing_pool = processing.Pool()
         
         #create a manager for producing shared all-sky image objects
-        self.__ASI_manager = ASIManager()
-        self.__ASI_manager.start()
+        #self.__ASI_manager = ASIManager()
+        #self.__ASI_manager.start()
 
 
     def __processTasks(self):

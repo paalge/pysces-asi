@@ -110,18 +110,19 @@ class gphotoCameraManager(cameraManagerBase):
     def __init__(self,settings_manager):
         self.__settings_manager = settings_manager
         
-        self.__settings_manager.set("output","cameraManager> Downloading settings from camera - please wait")
+        self.__settings_manager.set({"output":"cameraManager> Downloading settings from camera - please wait"})
         
         cameraManagerBase.__init__(self)       
         
         #set callbacks for camera configs
-        self.__settings_manager.register("current capture mode",self.setCaptureMode)        
+        #self.__settings_manager.register("current capture mode",self.setCaptureMode)        
+        #no longer needed since capture mode is read newly each time.
                
     ############################################################################################## 
     
     def _setConfig(self,name,value):
         
-        self.__settings_manager.set("output","cameraManager> Setting "+name+" to "+value)    
+        self.__settings_manager.set({"output":"cameraManager> Setting "+name+" to "+value})    
         
         config = self.camera_configs[name]
         
@@ -184,9 +185,9 @@ class gphotoCameraManager(cameraManagerBase):
         pre_image_list = pre_image_out.split("\n")
         
         time_of_capture = datetime.datetime.now()
-        self.__settings_manager.set("output", "cameraManager> Capturing image.")
+        self.__settings_manager.set({"output": "cameraManager> Capturing image."})
         p = Popen("gphoto2 --capture-image ",shell=True)
-        self.__settings_manager.set("Capture Time",datetime.datetime.utcnow().strptime("%d %b %Y %H:%M:%S %Z"))
+        self.__settings_manager.set({"Capture Time":datetime.datetime.utcnow().strptime("%d %b %Y %H:%M:%S %Z")})
         p.wait()
         
         if p.returncode != 0:
@@ -237,8 +238,8 @@ class gphotoCameraManager(cameraManagerBase):
                     #this means that the camera card probably wasn't blank to start with - which is a tricky problem!
                     #The easiest way around this is to wipe the card and accept that we will lose the photo(s)
                     #that have just been taken
-                    self.__settings_manager.set("output","cameraManager> Error! Camera card was not blank!")
-                    self.__settings_manager.set("output","cameraManager> Deleting all images from camera.")
+                    self.__settings_manager.set({"output":"cameraManager> Error! Camera card was not blank!"})
+                    self.__settings_manager.set({"output":"cameraManager> Deleting all images from camera."})
                     self._deletePhotos(active_folder)
                     return None,None
 
@@ -252,7 +253,7 @@ class gphotoCameraManager(cameraManagerBase):
     def _copyPhotos(self,folder_on_camera):
         glob_vars = self.__settings_manager.get(['tmp dir','filename_format'])
         
-        self.__settings_manager.set("output", "cameraManager> Downloading image(s)")
+        self.__settings_manager.set({"output": "cameraManager> Downloading image(s)"})
         p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
         p.wait()
     
@@ -311,18 +312,14 @@ class gphotoCameraManager(cameraManagerBase):
         values = {}
         
         #get values for particular config
-        self.__camera_lock.acquire()
         
-        try:
-            #run gphoto function in separate process
-            p = Popen("gphoto2 --get-config "+name,shell=True,stdout=PIPE)
+        #run gphoto function in separate process
+        p = Popen("gphoto2 --get-config "+name,shell=True,stdout=PIPE)
+        
+        out = string.join(p.stdout.readlines()) 
+        
+        p.wait()
             
-            out = string.join(p.stdout.readlines()) 
-            
-            p.wait()
-            
-        finally:
-            self.__camera_lock.release()
         
         #split config values into lines
         config_lines = out.split("\n")

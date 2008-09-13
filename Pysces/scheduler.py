@@ -70,6 +70,10 @@ class scheduler:
             
             if capture_mode_to_run != self.__current_capture_mode:
                 #the capture mode has changed and should be updated
+                
+                #TODO - update from here!
+                
+                
                 if eval(test) and capture_mode != current_mode_name:
                     
                     if current_mode_name != None:

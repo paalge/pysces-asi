@@ -3,10 +3,10 @@ import cPickle
 from cameraManager import gphotoCameraManager
 
 #import the plugins required to open the camera's images using PASKIL
-import PASKIL_D80_Jpeg_Plugin
-import PASKIL_D80_NEF_Plugin
+#import PASKIL_D80_Jpeg_Plugin
+#import PASKIL_D80_NEF_Plugin
 
-from PASKIL import allskyImage
+#from PASKIL import allskyImage
 
 class D80CameraManager(gphotoCameraManager):
     
