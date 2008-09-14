@@ -1,5 +1,5 @@
 from multitask import taskQueueBase,task
-import Queue
+import Queue,datetime
 from dataStorageClasses import captureMode
 import hostManager,D80
 from outputs import outputTaskHandler
@@ -11,7 +11,7 @@ class captureManager(taskQueueBase):
         self._settings_manager = settings_manager
         self._host_manager = hostManager.hostManager(settings_manager)
         self._camera_manager = D80.D80CameraManager(settings_manager)
-        self._output_task_handler = outputTaskHandler()
+        #self._output_task_handler = outputTaskHandler()
         
         taskQueueBase.__init__(self)
     
@@ -35,6 +35,7 @@ class captureManager(taskQueueBase):
         >>> c.commitTask(t)
         >>> t.result()
         Must still support tasks!
+        >>> c.commitTask(None) #also has to support being passed None
         >>> c.exit()
         
         """
@@ -57,19 +58,23 @@ class captureManager(taskQueueBase):
                 self._camera_manager.setCaptureMode(capture_mode)
                 
                 #record the time before we try to take an image
-                start_time = datetime.datetime.now()
+                start_time = datetime.datetime.utcnow()
                 
                 #update the folders on the host
-                self._host_manager.updateFolders()
+                self._host_manager.updateFolders(capture_mode)
             
                 #capture images and produce output tasks
-                images = self._camera_manager.captureImage()
-                self._submitOutputTasks(capture_mode,images)
+                images = self._camera_manager.captureImages()
+                
+                if images != None:
+                    self._submitOutputTasks(capture_mode,images)
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
-                    capture_mode = self._task_queue.get(timeout=(datetime.datetime.now() - start_time < datetime.timedelta(seconds=capture_mode.delay)))
+                    capture_mode = self._task_queue.get(timeout=(datetime.datetime.utcnow() - start_time < datetime.timedelta(seconds=capture_mode.delay)))
+                    print "capture manager got: ",capture_mode
                     self._task_queue.task_done()
+                    continue
                 except Queue.Empty:
                     #no new capture modes have come in, so we just continue with the one we have got
                     continue
@@ -79,12 +84,12 @@ class captureManager(taskQueueBase):
                 raise TypeError,str(type(capture_mode))+" is neither a task nor a captureMode and cannot be executed by the captureManager."
             
             #check if we have met the exit condition before attempting to get the next task/captureMode
-            if not self._stay_alive or (self._task_queue.empty()):
+            if not self._stay_alive:
                 break
             
             #sit and wait for the next task or captureMode
             capture_mode = self._task_queue.get()
-            
+
     ##############################################################################################  
      
     def _submitOutputTasks(self,capture_mode,images):
@@ -92,6 +97,10 @@ class captureManager(taskQueueBase):
         Method produces all the output sub-tasks required by the capture mode, wraps them in an output
         task object and passes it on to the outputTaskHandler.
         """
+        
+        self._settings_manager.set({"output":"captureManager> Submitted tasks for "+capture_mode.name+" capture mode"})
+        
+        
         
         
         

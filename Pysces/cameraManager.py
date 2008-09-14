@@ -31,10 +31,10 @@ class cameraManagerBase(taskQueueBase):
     def setCaptureMode(self,capture_mode):
         #create task
         task = Task(self._setCaptureMode,capture_mode)
-        
+
         #submit task
         self.commitTask(task)
-        
+
         #return result when task has been completed
         return task.result()
     
@@ -95,7 +95,7 @@ class cameraManagerBase(taskQueueBase):
    
     ############################################################################################## 
     
-    def _captureImage(self):
+    def _captureImages(self):
         raise AttributeError, "cameraManagerBase must be sub-classed"
      
      ##############################################################################################
@@ -108,21 +108,21 @@ class gphotoCameraManager(cameraManagerBase):
     """
     
     def __init__(self,settings_manager):
-        self.__settings_manager = settings_manager
+        self._settings_manager = settings_manager
         
-        self.__settings_manager.set({"output":"cameraManager> Downloading settings from camera - please wait"})
+        self._settings_manager.set({"output":"cameraManager> Downloading settings from camera - please wait"})
         
         cameraManagerBase.__init__(self)       
         
         #set callbacks for camera configs
-        #self.__settings_manager.register("current capture mode",self.setCaptureMode)        
+        #self._settings_manager.register("current capture mode",self.setCaptureMode)        
         #no longer needed since capture mode is read newly each time.
                
     ############################################################################################## 
     
     def _setConfig(self,name,value):
         
-        self.__settings_manager.set({"output":"cameraManager> Setting "+name+" to "+value})    
+        self._settings_manager.set({"output":"cameraManager> Setting "+name+" to "+value})    
         
         config = self.camera_configs[name]
         
@@ -184,18 +184,18 @@ class gphotoCameraManager(cameraManagerBase):
 
         pre_image_list = pre_image_out.split("\n")
         
-        time_of_capture = datetime.datetime.now()
-        self.__settings_manager.set({"output": "cameraManager> Capturing image."})
+        time_of_capture = datetime.datetime.utcnow()
+        self._settings_manager.set({"output": "cameraManager> Capturing image."})
         p = Popen("gphoto2 --capture-image ",shell=True)
-        self.__settings_manager.set({"Capture Time":datetime.datetime.utcnow().strptime("%d %b %Y %H:%M:%S %Z")})
         p.wait()
-        
+       
         if p.returncode != 0:
             raise RuntimeError, "Gphoto2 Error: Failed to capture image"
-        
+       
         #wait for the image to be stored for up to one minute
         flag=False
-        while time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.now() and not flag:
+        while (time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.utcnow()) and (not flag):
+           
             time.sleep(10)
             #get list of files on camera
             #run gphoto function in separate process
@@ -216,9 +216,10 @@ class gphotoCameraManager(cameraManagerBase):
                         post_image_list.remove(line)
                     except ValueError:
                         continue
-                
+               
                 #get number of files in active folder
                 folder_filecount = 0
+   
                 for line in post_image_list:
                     if line.lstrip().startswith("There"):
                         words = line.split()
@@ -227,7 +228,7 @@ class gphotoCameraManager(cameraManagerBase):
                             folder_filecount = eval(words[2])
                         except NameError:
                             pass
-                
+   
                 #if image has not been stored yet, then wait longer
                 if folder_filecount < number_of_images:
                     continue
@@ -238,22 +239,22 @@ class gphotoCameraManager(cameraManagerBase):
                     #this means that the camera card probably wasn't blank to start with - which is a tricky problem!
                     #The easiest way around this is to wipe the card and accept that we will lose the photo(s)
                     #that have just been taken
-                    self.__settings_manager.set({"output":"cameraManager> Error! Camera card was not blank!"})
-                    self.__settings_manager.set({"output":"cameraManager> Deleting all images from camera."})
+                    self._settings_manager.set({"output":"cameraManager> Error! Camera card was not blank!"})
+                    self._settings_manager.set({"output":"cameraManager> Deleting all images from camera."})
                     self._deletePhotos(active_folder)
                     return None,None
 
-            if not flag:
-                raise RuntimeError,"Gphoto2 Error: Unable to download image(s)"
-            else:
-                return active_folder,time_of_capture
+        if not flag:
+            raise RuntimeError,"Gphoto2 Error: Unable to download image(s)"
+        else:
+            return active_folder,time_of_capture
     
     ##############################################################################################    
     
-    def _copyPhotos(self,folder_on_camera):
-        glob_vars = self.__settings_manager.get(['tmp dir','filename_format'])
+    def _copyPhotos(self,folder_on_camera,time_of_capture):
+        glob_vars = self._settings_manager.get(['tmp dir','filename_format'])
         
-        self.__settings_manager.set({"output": "cameraManager> Downloading image(s)"})
+        self._settings_manager.set({"output": "cameraManager> Downloading image(s)"})
         p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
         p.wait()
     
@@ -298,7 +299,7 @@ class gphotoCameraManager(cameraManagerBase):
     
     ############################################################################################## 
     
-    def _captureImage(self):
+    def _captureImages(self):
         raise AttributeError, "gphotoCameraManager must be sub-classed"
     
     ############################################################################################## 

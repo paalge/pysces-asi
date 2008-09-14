@@ -102,13 +102,13 @@ class settingsManager(taskQueueBase):
         Some doctests:
         
         >>> import threading
-        >>> threading.activeCount()
+        >>> print threading.activeCount()
         1
         >>> s = settingsManager()
-        >>> threading.activeCount()
+        >>> print threading.activeCount()
         2
         >>> s.exit()
-        >>> threading.activeCount()
+        >>> print threading.activeCount()
         1
 
         """
@@ -141,7 +141,7 @@ class settingsManager(taskQueueBase):
         KeyError: "some variable that doesn't exist"
         >>> import os
         >>> s.create("home","${HOME}")
-        >>> s.get(["home"])["home"] == os.path.expanduser("~")
+        >>> print s.get(["home"])["home"] == os.path.expanduser("~")
         True
         >>> s.exit()
         

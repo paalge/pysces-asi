@@ -1,7 +1,7 @@
 import ephem
 import datetime,time,math
-import captureMode,dailyPro
-import OTFPro
+from dataStorageClasses import captureMode
+import captureManager
 
 #define the functions used in the settings file
 ##############################################################################################
@@ -22,7 +22,7 @@ def Date(date_string):
     Returns a date object built from a string of format "%d:%m:%y". This is a macro-type function
     which is run when the schedule tests are evaluated.
     """
-    d=datetime.datetime.strptime(time_string,"%d:%m:%y")
+    d=datetime.datetime.strptime(date_string,"%d/%m/%y")
     return d.date()
 
 ##############################################################################################
@@ -35,8 +35,9 @@ class scheduler:
     def __init__(self,settings_manager):
 
         self.__settings_manager = settings_manager
+        
         self.__running = False
-        self.__current_capture_mode = None
+        self.__current_capture_mode_name = None
         
         #create an pyephem observer object for calculating sun and moon angles
         self.__createObservatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
@@ -56,6 +57,8 @@ class scheduler:
         
         if self.__running:
             raise RunTimeError,"Scheduler is already running!"
+        
+        self.__capture_manager = captureManager.captureManager(self.__settings_manager)
             
         self.__running = True
         
@@ -66,51 +69,49 @@ class scheduler:
         while self.__running:
             
             #find out which capture mode should be running now
-            capture_mode_to_run = self.__evaluateSchedule()
+            capture_mode_to_run_name = self.__evaluateSchedule()
             
-            if capture_mode_to_run != self.__current_capture_mode:
+            if capture_mode_to_run_name != self.__current_capture_mode_name:
                 #the capture mode has changed and should be updated
                 
-                #TODO - update from here!
                 
                 
-                if eval(test) and capture_mode != current_mode_name:
+                if capture_mode_to_run_name == None:
+                    #no capture mode should be running - pass this information to the captureManager
+                    self.__capture_manager.commitTask(None)
                     
-                    if current_mode_name != None:
-                        self.__current_capture_mode.exit()
-                        
-                    capture_settings = glob_vars["capture modes"][capture_mode]
+                    self.__settings_manager.set({"output":"scheduler> Set capture mode to None"})
+                    self.__settings_manager.set({"output":"scheduler> Waiting....."})
+                    self.__current_capture_mode_name = capture_mode_to_run_name
                     
-                    self.__current_capture_mode = captureMode.captureMode(capture_settings,self.__camera_manager)
-                    self.__settings_manager.set("current capture mode",self.__current_capture_mode.name())
-                    self.__settings_manager.set("output","scheduler> Starting \""+self.__current_capture_mode.name()+"\" capture mode")
-                    self.__current_capture_mode.start()
-                    flag = True
-                    break
+                else:
                 
-                elif eval(test) and capture_mode == current_mode_name:
-                    #current mode is still valid so break out of checking loop
-                    flag = True
-                    break
+                    #build a captureMode object from the data stored in the settings manager 
+                    #note that the captureMode constructor takes care of building outputTypes,
+                    #and the outputTypes constructor takes care of building imageTypes
+                    glob_vars = self.__settings_manager.get(["capture modes","image types","output types"])
+                    capture_mode_to_run = captureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
+                    
+                    #pass capture mode to captureManager
+                    self.__capture_manager.commitTask(capture_mode_to_run)
+                    self.__settings_manager.set({"output":"scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})
                 
-            if (not flag) and self.__current_capture_mode != None:
-                self.__current_capture_mode.exit()
-                self.__current_capture_mode = None
-                self.__settings_manager.set("output","scheduler> Set capture mode to None")
-                self.__settings_manager.set("output","scheduler> Waiting.....")
-  
+                    self.__current_capture_mode_name = capture_mode_to_run_name
+            
+            #wait for a short while before re-evaluating the schedule
             time.sleep(5)
         
     ##############################################################################################          
       
     def exit(self):
         """
-        Terminates the current capture mode, the on-the-fly processing thread and the daily processing
-        thread and returns.
+        Terminates the captureManager and returns
         """
         self.__running = False
-        if self.__current_capture_mode != None:
-            self.__current_capture_mode.exit()
+        try:
+            self.__capture_manager.exit()
+        except AttributeError: #can't kill the capture manager if it hasn't been created yet!
+            pass
 
     ##############################################################################################    
     
@@ -147,9 +148,9 @@ class scheduler:
         self.__moon.compute(self.__observatory)
         
         #set sun and moon angles
-        SUN_ANGLE = math.degrees(sun.alt)
-        MOON_ANGLE = math.degrees(moon.alt)
-        MOON_PHASE = float(moon.moon_phase * 100.0)
+        SUN_ANGLE = math.degrees(self.__sun.alt)
+        MOON_ANGLE = math.degrees(self.__moon.alt)
+        MOON_PHASE = float(self.__moon.moon_phase * 100.0)
         
         #get the schedule from the global variables
         schedule = self.__settings_manager.get(["schedule"])["schedule"]
@@ -161,16 +162,7 @@ class scheduler:
         #otherwise return None
         return None
     
-    ############################################################################################## 
-    
-    def __updateDay(self):
-        """
-        Updates the day global variable, causing the directory structure to be updated
-        by the host manager via a callback function
-        """            
-        if self.__settings_manager.get(['day'])['day'] != now.strftime("%j"):
-            self.__settings_manager.set({'day':now.strftime("%j")})
-        
+    ##############################################################################################     
 ##############################################################################################       
        
         

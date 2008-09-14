@@ -3,7 +3,6 @@ The settings file parser module provides a settingsFileParser class for reading
 and writing to the settings file.
 """
 from __future__ import with_statement
-import dataStorageClasses
 import os
 
 class settingsFileParser:
@@ -12,47 +11,8 @@ class settingsFileParser:
         self.filename = filename
         
     ##############################################################################################
-        
+                
     def getSettings(self):
-        
-        #read the settings from the file
-        settings_in_file = self.__loadSettingsFile()
-        
-        #build the imageType objects
-        for image_type_name in settings_in_file["image types"].keys():
-            #overwrite the dict description of the image type with an imageType object
-            settings_in_file["image types"][image_type_name] = dataStorageClasses.imageType(settings_in_file["image types"][image_type_name])
-        
-        #build the outputType object
-        for name,output_type in settings_in_file["output types"].items():
-            #first we overwrite the name of the image type with the correct imageType object
-            output_type["image_type"] = settings_in_file["image types"][output_type["image_type"]]
-            
-            #then we overwrite the dict description of the output type with an outputType object
-            settings_in_file["output types"][name] = dataStorageClasses.outputType(output_type)
-        
-        #build captureMode objects
-        for cm_name in settings_in_file["capture modes"].keys():
-            #first we replace the output names with their respective outputType objects
-            output_type_objects = []
-            for output_name in settings_in_file["capture modes"][cm_name]["outputs"]:
-                output_type_objects.append(settings_in_file["output types"][output_name])
-                
-            settings_in_file["capture modes"][cm_name]["outputs"] = output_type_objects
-            
-            #then we overwrite the dict description of the output type with an outputType object
-            settings_in_file["capture modes"][cm_name] = dataStorageClasses.captureMode(settings_in_file["capture modes"][cm_name])
-        
-        
-        #remove the ouputs and images entries from the settings dict and return it
-        #settings_in_file.pop("image types")
-        #settings_in_file.pop("output types")
-        
-        return settings_in_file
-            
-    ##############################################################################################       
-                
-    def __loadSettingsFile(self):
         """
         Reads the settings file and returns a dictionary containing the name,value pairs contained 
         in the file.
@@ -240,8 +200,8 @@ class settingsFileParser:
                         #go back to start of declaration
                         fp.seek(dec_start)
                         
-                        #update file converting the captureMode object into a dict
-                        self.__updateVariables(fp,ofp,i,settings["capture modes"][capture_mode["name"]].toDict())
+                        #update file
+                        self.__updateVariables(fp,ofp,i,settings["capture modes"][capture_mode["name"]])
                         
                     elif line.lstrip().startswith("<schedule>"):
                         ofp.write(line)
@@ -258,8 +218,8 @@ class settingsFileParser:
                         #go back to start of declaration
                         fp.seek(dec_start)
                         
-                        #update file converting the outputType object to a dict
-                        self.__updateVariables(fp, ofp, i, settings["output types"][output["name"]].toDict())
+                        #update file
+                        self.__updateVariables(fp, ofp, i, settings["output types"][output["name"]])
                     
                     elif line.lstrip().startswith("<image>"):
                         ofp.write(line)
@@ -273,7 +233,7 @@ class settingsFileParser:
                         fp.seek(dec_start)
                         
                         #update file converting the imageType object back to a dict
-                        self.__updateVariables(fp,ofp,i,settings["image types"][image["image_type"]].toDict())
+                        self.__updateVariables(fp,ofp,i,settings["image types"][image["image_type"]])
                         
                     else:
                         raise ValueError,"Unable to update settings file. Error on line "+str(i)    

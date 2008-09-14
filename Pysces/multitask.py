@@ -18,9 +18,10 @@ class task:
         #try to run the function. If it fails then store the exception object to pass to outside thread
         try:
             self._return_value = self._function(*self._args,**self._kwargs)
+        
         except Exception,self._exception:
             pass
-            
+    
         #set the event to true, to show that the task is finished
         self._completed.set()
         
