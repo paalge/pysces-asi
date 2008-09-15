@@ -100,7 +100,6 @@ class hostManager:
         """
         Blocks until the directory is empty and then removes it.
         """
-
         while (len(os.listdir(dir)) != 0):
                time.sleep(3)
        

@@ -2,19 +2,23 @@ from multitask import taskQueueBase,task
 import Queue,datetime
 from dataStorageClasses import captureMode
 import hostManager,D80
-from outputs import outputTaskHandler
+#from outputs import outputTaskHandler
 
 class captureManager(taskQueueBase):
     
     def __init__(self,settings_manager):
-        
-        self._settings_manager = settings_manager
-        self._host_manager = hostManager.hostManager(settings_manager)
-        self._camera_manager = D80.D80CameraManager(settings_manager)
-        #self._output_task_handler = outputTaskHandler()
-        
         taskQueueBase.__init__(self)
-    
+        
+        try:
+            self._settings_manager = settings_manager
+            self._host_manager = hostManager.hostManager(settings_manager)
+
+            self._camera_manager = D80.D80CameraManager(settings_manager)
+
+        except Exception,ex:
+            self.exit()
+            raise ex
+            
     def _processTasks(self):
         """
         Here we overwrite the _processTasks method, so that the captureManager can deal with a queue of 
@@ -29,14 +33,15 @@ class captureManager(taskQueueBase):
         >>> s = settingsManager()
         >>> from multitask import Task
         >>> def output(s):
-        ...    print s
+        ...    return s
         >>> t = Task(output,"Must still support tasks!")
         >>> c = captureManager(s)
         >>> c.commitTask(t)
-        >>> t.result()
+        >>> print t.result()
         Must still support tasks!
         >>> c.commitTask(None) #also has to support being passed None
         >>> c.exit()
+        >>> s.exit()
         
         """
         #pull the first capture mode out of the queue
@@ -106,7 +111,20 @@ class captureManager(taskQueueBase):
         
     ##############################################################################################
     
-    #def exit(self):
-        #TODO - kill outputTaskHandler,cameraManager and host manager
-    #    return
+    def exit(self):
+        #self._output_task_handler.exit()
+        try:
+            self._camera_manager.exit()
+        except AttributeError:
+            pass
+        
+        try:
+            self._host_manager.exit()
+        except AttributeError:
+            pass    
+        
+        #kill own worker thread
+        taskQueueBase.exit(self)
+        
+    ##############################################################################################
 ##############################################################################################             

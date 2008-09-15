@@ -9,10 +9,13 @@ import doctest
 #list of all modules in the Pysces package to be tested 
 modules_to_doctest = ["settingsManager","captureManager"]
 
-suite = unittest.TestSuite()
+
 for mod in modules_to_doctest:
-    suite.addTest(doctest.DocTestSuite(__import__(mod)))
-runner = unittest.TextTestRunner()
-runner.run(suite)
+    print "Running doctests for "+mod
+    result = doctest.testmod(__import__(mod))
+    print mod+" failed ",result[0]," out of ",result[1]," tests."
+
+print "Done"
+
 
 

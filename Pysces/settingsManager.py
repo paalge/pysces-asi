@@ -54,7 +54,7 @@ class settingsManager(taskQueueBase):
         
         for key in persistant_data.keys():
             self.__create(key,persistant_data[key],persistant=True)
-            
+               
     ##############################################################################################
     ##############################################################################################    
     #define public methods - note that the settingsManager worker thread does not have ownership of these

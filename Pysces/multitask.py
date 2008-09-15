@@ -48,7 +48,6 @@ class taskQueueBase:
         self._worker_thread = Thread(target = self._processTasks)
         self._stay_alive = True
         self._worker_thread.start()
-        self._running = False
         
     def _processTasks(self):
         while self._stay_alive or (not self._task_queue.empty()):
@@ -73,8 +72,6 @@ class taskQueueBase:
         
         #block until outstanding tasks have been completed
         self._worker_thread.join()
-        
-        self._running = False
     
     def _exit(self):
         self._stay_alive = False

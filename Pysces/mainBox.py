@@ -1,72 +1,89 @@
-import settingsManager,cameraManager,hostManager,scheduler
-import threading,sys
+import settingsManager,scheduler
+from multitask import taskQueueBase,Task
+import sys,time
 
 
-class mainBox:
+class mainBox(taskQueueBase):
     
     def __init__(self):
         self.__running = False
         
-        #create settings manger
-        #manager = settingsManager.sharedSettings()
-        #manager.start()
-        #self.__settings_manager = manager.sharedSettingsManager()
-        
+        #create settings manger object
         self.__settings_manager = settingsManager.settingsManager()
         
-        #create camera manager
-        #self.__camera_manager = cameraManager.cameraManager(self.__settings_manager)
-        
-        #create host manager
-        #self.__host_manager = hostManager.hostManager(self.__settings_manager)
-        
-        #create scheduler
+        #create scheduler object
         self.__scheduler = scheduler.scheduler(self.__settings_manager)
+        
+        self.__capture_task = None
+        
+        #start mainBox worker thread
+        taskQueueBase.__init__(self)
         
     ##############################################################################################  
          
     def start(self):
-        if not self.__running:
-            #self.__host_manager.start()
+        if self.__capture_task == None:
+            #create task
+            self.__capture_task = Task(self.__scheduler.start)
             
-            #create new thread to run script
-            self.__capture_thread = threading.Thread(target=self.__scheduler.start,args=())
+            #note that this task will not complete until the scheduler has exited so mainBox will not
+            #pull any more tasks out of the queue until exit() is called by an external thread.
+            #This is a bit different to other taskQueue classes used in the program, where most public
+            #methods simply place a task into the queue. mainBox's public methods can all be executed 
+            #asyncronously (since the syncronisation is done in the settingsManager) and they are therefore
+            #all executed by the calling thread (except for start()).
             
-            #run it!
-            self.__capture_thread.start()
+            #commit task
+            self.commitTask(self.__capture_task)
             
-            self.__running = True
-        
         else:
-            raise RunTimeError, "Cannont start more than one capture thread!"
+            raise RunTimeError, "Cannont start more than one scheduler!"
         
     ############################################################################################## 
+    
+    def stop(self):
+        
+        #if a scheduler is running then kill it
+        if self.__capture_task != None:
+            #kill scheduler and wait for capture thread to return
+            self.__settings_manager.set({"output":"mainBox> Killing scheduler"})
+            self.__scheduler.exit()
+            self.__capture_task.result() #this blocks until the scheduler has exited
+            self.__capture_task = None
+    
+    ##############################################################################################     
               
     def exit(self):
         
-        #kill scheduler and wait for capture thread to return
-        self.__settings_manager.set({"output":"mainBox> Killing scheduler"})
-        self.__scheduler.exit()
-        self.__capture_thread.join()
+        #if a scheduler is running then kill it
+        if self.__capture_task != None:
+            #kill scheduler and wait for capture thread to return
+            self.__settings_manager.set({"output":"mainBox> Killing scheduler"})
 
-        #kill host manager
-#        self.__settings_manager.set("output","mainBox> Killing host_manager")
-#        self.__host_manager.exit()
-#        
-#        #kill camera manager
-#        self.__settings_manager.set("output","mainBox> Killing camera_manager")
-#        self.__camera_manager.exit()
-#        
+            self.__scheduler.exit()
+            try:
+                self.__capture_task.result() #this blocks until the scheduler has exited
+            except:
+                #ignore any exceptions that were raised due to killing the scheduler
+                #they were probably caused by gphoto (which seems to also receive 
+                #the keyboard interrupt signal - strange?!). It doesn't matter if that 
+                #part of the program exits in a messy way - each class still gets to execute
+                #its own exit method.
+                pass
+
+            self.__capture_task = None    
+
         #kill settings manager
         self.__settings_manager.set({"output":"mainBox> Killing settings_manager"})
         self.__settings_manager.exit()
         
-        self.__running = False
+        #kill the mainBox worker thread
+        taskQueueBase.exit(self)
         
     ##############################################################################################         
     
-    def setVar(self,name,value):
-        self.__settings_manager.set(name,value)
+    def setVar(self,names):
+        self.__settings_manager.set(names)
         
     ############################################################################################## 
         
@@ -75,18 +92,11 @@ class mainBox:
            
     ############################################################################################## 
        
-    def grabVar(self,names):
-        return self.__settings_manager.grab(names)
+    def getVar(self,names):
+        return self.__settings_manager.get(names)
     
     ############################################################################################## 
-        
-    def releaseVar(self,name):
-        self.__settings_manager.release(name)
-        
-    ##############################################################################################         
-        
-        
-        
+##############################################################################################         
 
 
 #if the script is being run in non-gui mode then run it!        
@@ -101,13 +111,12 @@ if __name__ == '__main__':
     #run!
     main_box.start()
     
-    #wait to be stopped
+    #wait to be stopped. Unfortunately, KeyboardInterrupt doesn't seem to work on a blocking join()
+    #so instead we use the sleep function and keep repeating it until interrupted
     try:
-        while (True):
-            pass
+        while True:
+            time.sleep(3000000)
     except KeyboardInterrupt:
         print "Pysces> Closing capture thread, please wait...."
         main_box.exit()
-        
-        sys.exit()
-        
+          

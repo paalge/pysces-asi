@@ -1,5 +1,6 @@
 import ephem
 import datetime,time,math
+from threading import Event
 from dataStorageClasses import captureMode
 import captureManager
 
@@ -46,7 +47,7 @@ class scheduler:
         self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
         self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
         self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
-
+        
     ##############################################################################################        
    
     def start(self):
@@ -57,10 +58,11 @@ class scheduler:
         
         if self.__running:
             raise RunTimeError,"Scheduler is already running!"
+        self.__running = True
+        
         
         self.__capture_manager = captureManager.captureManager(self.__settings_manager)
-            
-        self.__running = True
+
         
         #create sun and moon objects
         self.__sun,self.__moon = ephem.Sun(),ephem.Moon()
@@ -110,7 +112,7 @@ class scheduler:
         self.__running = False
         try:
             self.__capture_manager.exit()
-        except AttributeError: #can't kill the capture manager if it hasn't been created yet!
+        except AttributeError:
             pass
 
     ##############################################################################################    
