@@ -64,6 +64,11 @@ class networkManager:
             
             self.__awaiting_password = False
     
+    ##############################################################################################            
+    
+    def copyToServer(self,source,dest):
+        self.__settings_manager.set({"output": "networkManager> Copied file to server"}) 
+    
     ##############################################################################################                 
                 
     def exit(self):

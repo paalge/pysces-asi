@@ -4,7 +4,8 @@ variables) for Pysces.
 """
 import os
 import persist,settingsFileParser
-from multitask import Task,taskQueueBase
+from multitask import taskQueueBase
+
 
         
 class settingsManager(taskQueueBase):
@@ -26,34 +27,39 @@ class settingsManager(taskQueueBase):
         
         taskQueueBase.__init__(self)
         
-        #define private attributes
-        self.__variables = {}
-        self.__callbacks = {}
-        self.__callback_ids = {}
+        try:
+            #define private attributes
+            self.__variables = {}
+            self.__callbacks = {}
+            self.__callback_ids = {}
+            
+            #hard code settings file location and create a parser
+            home = os.path.expanduser("~")
+            self.__settings_file_parser = settingsFileParser.settingsFileParser(home+"/.Pysces/settings.txt")
+            
+            #create an output variable - this is used instead of printing to stdout, making it easier
+            #for a top layer application (e.g. a GUI) to access this data
+            self.__create("output","")      
+            
+            #load settings file
+            settings = self.__settings_file_parser.getSettings()
+                 
+            #store settings in variables
+            for key in settings.keys():
+                self.__create(key,settings[key])
+                        
+            #create persistant storage class
+            self.__persistant_storage = persist.persistantStorage(home+"/.Pysces",self)
+            
+            #load persistant values into variables
+            persistant_data = self.__persistant_storage.getPersistantData()
+            
+            for key in persistant_data.keys():
+                self.__create(key,persistant_data[key],persistant=True)
         
-        #hard code settings file location and create a parser
-        home = os.path.expanduser("~")
-        self.__settings_file_parser = settingsFileParser.settingsFileParser(home+"/.Pysces/settings.txt")
-        
-        #create an output variable - this is used instead of printing to stdout, making it easier
-        #for a top layer application (e.g. a GUI) to access this data
-        self.__create("output","")      
-        
-        #load settings file
-        settings = self.__settings_file_parser.getSettings()
-             
-        #store settings in variables
-        for key in settings.keys():
-            self.__create(key,settings[key])
-                    
-        #create persistant storage class
-        self.__persistant_storage = persist.persistantStorage(home+"/.Pysces",self)
-        
-        #load persistant values into variables
-        persistant_data = self.__persistant_storage.getPersistantData()
-        
-        for key in persistant_data.keys():
-            self.__create(key,persistant_data[key],persistant=True)
+        except Exception,ex:
+            taskQueueBase.exit(self)
+            raise ex
                
     ##############################################################################################
     ##############################################################################################    
@@ -84,7 +90,7 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = Task(self.__create,name,value,persistant=persistant)
+        task = self.createTask(self.__create,name,value,persistant=persistant)
         
          #submit task
         self.commitTask(task)
@@ -148,7 +154,7 @@ class settingsManager(taskQueueBase):
         """
                 
         #create task
-        task = Task(self.__get,names)
+        task = self.createTask(self.__get,names)
         
         #submit task
         self.commitTask(task)
@@ -158,7 +164,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################      
     
-    def operate(self,name,func):
+    def operate(self,name,func,*args,**kwargs):
         """
         The operate() method provides a way to apply functions to global variables in a thread-safe
         way. For example if we want to increment a value, we might do:
@@ -179,17 +185,29 @@ class settingsManager(taskQueueBase):
         >>> s.operate("new_var",increment)
         >>> print s.get(["new_var"])['new_var']
         3
-        >>> s.exit()
         
         This ensures that the entire increment operation is completed before any other threads/processes
         are given access to the variable.
         
         The name argument should be the name of a global variable. The func argument should be a callable
-        object that takes the current value of the variable as it's only argument and returns the new value.
+        object that takes the current value of the variable as its first argument and returns the new value.
+        Additional arguments for the function can be specified using *args and **kwargs. For example, they 
+        can be used to perform list operations:
+        
+        >>> def appendToList(list,value_to_append):
+        ...     list.append(value_to_append)
+        ...     return list
+        >>> s.create("new_list",[])
+        >>> s.operate("new_list",appendToList,42)
+        >>> print s.get(["new_list"])['new_list']
+        [42]
+        >>> s.exit()
+        
+        
         """
           
         #create task
-        task = Task(self.__operate,name,func)
+        task = self.createTask(self.__operate,name,func,*args,**kwargs)
         
         #submit task
         self.commitTask(task)
@@ -234,7 +252,7 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = Task(self.__register,name,callback,variables)
+        task = self.createTask(self.__register,name,callback,variables)
         
         #submit task
         self.commitTask(task)
@@ -268,7 +286,7 @@ class settingsManager(taskQueueBase):
             raise TypeError,"Expecting dictionary containing name:value pairs"
         
         #create task
-        task = Task(self.__set,variables)
+        task = self.createTask(self.__set,variables)
         
         #submit task
         self.commitTask(task)
@@ -283,7 +301,7 @@ class settingsManager(taskQueueBase):
         Unregisters the callback specified by the id argument - see register()
         """
         #create task
-        task = Task(self.__unregister,id)
+        task = self.createTask(self.__unregister,id)
         
          #submit task
         self.commitTask(task)
@@ -327,11 +345,11 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################           
     
-    def __operate(self,name,func):
+    def __operate(self,name,func,*args,**kwargs):
 
         variable = self.__get([name])
         
-        new_value = func(variable[name])
+        new_value = func(variable[name],*args,**kwargs)
         
         self.__set({name:new_value})
     

@@ -1,6 +1,8 @@
 import settingsManager,scheduler
-from multitask import taskQueueBase,Task
-import sys,time
+from multitask import taskQueueBase,threadTask
+import time,threading,processing
+
+
 
 
 class mainBox(taskQueueBase):
@@ -24,7 +26,7 @@ class mainBox(taskQueueBase):
     def start(self):
         if self.__capture_task == None:
             #create task
-            self.__capture_task = Task(self.__scheduler.start)
+            self.__capture_task = threadTask(self.__scheduler.start)
             
             #note that this task will not complete until the scheduler has exited so mainBox will not
             #pull any more tasks out of the queue until exit() is called by an external thread.
@@ -35,6 +37,10 @@ class mainBox(taskQueueBase):
             
             #commit task
             self.commitTask(self.__capture_task)
+            
+            t = threadTask(self.__capture_task.result)
+            self.commitTask(t)
+            return t
             
         else:
             raise RunTimeError, "Cannont start more than one scheduler!"
@@ -59,9 +65,8 @@ class mainBox(taskQueueBase):
         if self.__capture_task != None:
             #kill scheduler and wait for capture thread to return
             self.__settings_manager.set({"output":"mainBox> Killing scheduler"})
-
-            self.__scheduler.exit()
             try:
+                self.__scheduler.exit()
                 self.__capture_task.result() #this blocks until the scheduler has exited
             except:
                 #ignore any exceptions that were raised due to killing the scheduler
@@ -75,10 +80,12 @@ class mainBox(taskQueueBase):
 
         #kill settings manager
         self.__settings_manager.set({"output":"mainBox> Killing settings_manager"})
-        self.__settings_manager.exit()
-        
-        #kill the mainBox worker thread
-        taskQueueBase.exit(self)
+        try:
+            self.__settings_manager.exit()
+        finally:
+            #kill the mainBox worker thread
+            taskQueueBase.exit(self)
+        raise KeyboardInterrupt
         
     ##############################################################################################         
     
@@ -97,7 +104,7 @@ class mainBox(taskQueueBase):
     
     ############################################################################################## 
 ##############################################################################################         
-
+import signal
 
 #if the script is being run in non-gui mode then run it!        
 if __name__ == '__main__':
@@ -106,17 +113,24 @@ if __name__ == '__main__':
         print s["output"]
     
     main_box = mainBox()
+    #signal.signal(signal.SIGINT,main_box.exit)
+    
     main_box.register("output",output,["output"])
     
     #run!
-    main_box.start()
-    
-    #wait to be stopped. Unfortunately, KeyboardInterrupt doesn't seem to work on a blocking join()
-    #so instead we use the sleep function and keep repeating it until interrupted
+    t = main_box.start()
     try:
-        while True:
-            time.sleep(3000000)
+
+        #wait to be stopped. Unfortunately, KeyboardInterrupt doesn't seem to work on a blocking join()
+        #so instead we use the sleep function and keep repeating it until interrupted
+    
+        t.result()
     except KeyboardInterrupt:
         print "Pysces> Closing capture thread, please wait...."
         main_box.exit()
-          
+        print "Un-joined threads: "
+        for thread in threading.enumerate():
+            print thread._Thread__target
+        
+        print "Un-joined child processes:"
+        print processing.activeChildren()

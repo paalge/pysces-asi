@@ -55,7 +55,6 @@ class scheduler:
         Starts the scheduler running. Basically it enters an infinte loop of checking the schedule
         to see which capture mode should be run. 
         """
-        
         if self.__running:
             raise RunTimeError,"Scheduler is already running!"
         self.__running = True
@@ -67,11 +66,14 @@ class scheduler:
         #create sun and moon objects
         self.__sun,self.__moon = ephem.Sun(),ephem.Moon()
         
+        self.__settings_manager.set({"output":"scheduler> Waiting....."})
+        
         #work out which capture mode should be running now
         while self.__running:
             
             #find out which capture mode should be running now
             capture_mode_to_run_name = self.__evaluateSchedule()
+            
             
             if capture_mode_to_run_name != self.__current_capture_mode_name:
                 #the capture mode has changed and should be updated
@@ -93,7 +95,7 @@ class scheduler:
                     #and the outputTypes constructor takes care of building imageTypes
                     glob_vars = self.__settings_manager.get(["capture modes","image types","output types"])
                     capture_mode_to_run = captureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
-                    
+
                     #pass capture mode to captureManager
                     self.__capture_manager.commitTask(capture_mode_to_run)
                     self.__settings_manager.set({"output":"scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})

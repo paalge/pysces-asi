@@ -1,8 +1,8 @@
-from multitask import taskQueueBase,task
+from multitask import taskQueueBase,threadTask
 import Queue,datetime
 from dataStorageClasses import captureMode
-import hostManager,D80
-#from outputs import outputTaskHandler
+import hostManager,D80,outputTaskHandler
+from outputTask import createOutputTasks
 
 class captureManager(taskQueueBase):
     
@@ -14,6 +14,7 @@ class captureManager(taskQueueBase):
             self._host_manager = hostManager.hostManager(settings_manager)
 
             self._camera_manager = D80.D80CameraManager(settings_manager)
+            self._output_task_handler = outputTaskHandler.outputTaskHandler(settings_manager)
 
         except Exception,ex:
             self.exit()
@@ -31,10 +32,10 @@ class captureManager(taskQueueBase):
         >>> #doc tests to ensure that the class still supports task objects
         >>> from settingsManager import settingsManager
         >>> s = settingsManager()
-        >>> from multitask import Task
+        >>> from multitask import threadTask
         >>> def output(s):
         ...    return s
-        >>> t = Task(output,"Must still support tasks!")
+        >>> t = threadTask(output,"Must still support tasks!")
         >>> c = captureManager(s)
         >>> c.commitTask(t)
         >>> print t.result()
@@ -52,7 +53,7 @@ class captureManager(taskQueueBase):
             #the object from the queue could be a task object, so we should try executing it first
             #before we assume that it is a capture mode - this is a bit of a hack, but is needed to 
             #make sure that the exit() method works correctly
-            if isinstance(capture_mode,task):
+            if isinstance(capture_mode,threadTask):
                 capture_mode.execute()
                 self._task_queue.task_done()
             elif capture_mode == None:
@@ -67,12 +68,18 @@ class captureManager(taskQueueBase):
                 
                 #update the folders on the host
                 self._host_manager.updateFolders(capture_mode)
-            
+                
+                #get the current folder on the host
+                folder_on_host = self._settings_manager.get(["output folder"])["output folder"]
+                
                 #capture images and produce output tasks
                 images = self._camera_manager.captureImages()
                 
                 if images != None:
-                    self._submitOutputTasks(capture_mode,images)
+                    #create an outputTask obejct for each image type and pass them to the ouputTaskHandler
+                    output_tasks = createOutputTasks(capture_mode,images,folder_on_host,self._settings_manager)
+                    for output_task in output_tasks:
+                        self._output_task_handler.commitTask(output_task)
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
@@ -96,23 +103,12 @@ class captureManager(taskQueueBase):
             capture_mode = self._task_queue.get()
 
     ##############################################################################################  
-     
-    def _submitOutputTasks(self,capture_mode,images):
-        """
-        Method produces all the output sub-tasks required by the capture mode, wraps them in an output
-        task object and passes it on to the outputTaskHandler.
-        """
-        
-        self._settings_manager.set({"output":"captureManager> Submitted tasks for "+capture_mode.name+" capture mode"})
-        
-        
-        
-        
-        
-    ##############################################################################################
     
     def exit(self):
-        #self._output_task_handler.exit()
+        try:
+            self._output_task_handler.exit()
+        except AttributeError:
+            pass
         try:
             self._camera_manager.exit()
         except AttributeError:

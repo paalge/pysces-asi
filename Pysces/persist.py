@@ -42,7 +42,7 @@ class persistantStorage():
         
         for name in self.__data.keys():
             try:
-                self.__data[name] = self.__settingsManager.get([name])[name]
+                self.__data[name] = self.__settings_manager.get([name])[name]
             except KeyError:
                 #ignore any values that haven't been loaded into the settings manager yet
                 pass

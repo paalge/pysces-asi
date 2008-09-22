@@ -5,8 +5,10 @@ class hostManager:
     def __init__(self,settings_manager):
         
         self.__old_tmp_dir = None
-        self.__removal_thread=None
+        self.__removal_thread = None
         self.__settings_manager = settings_manager
+        
+        self.__stay_alive = True
         
         #create variables
         settings_manager.create("output folder","")
@@ -14,7 +16,16 @@ class hostManager:
             settings_manager.create("tmp dir",None,persistant=True)
         except ValueError:
             pass
-     
+        
+        try:
+            settings_manager.create("hostManager dirs to remove",[],persistant=True)
+        except ValueError:
+            pass 
+        
+        #create a new thread to remove empty temporary directories
+        self.__removal_thread = threading.Thread(target=self.__removeDir)
+        self.__removal_thread.start()
+        
     ############################################################################################## 
              
     def updateFolders(self,capture_mode):
@@ -79,7 +90,6 @@ class hostManager:
         
         #if the new tmp dir is the same as the old one and still exists then return
         if glob_vars['tmp dir'] == glob_vars['output folder']+"/tmp" and os.path.exists(glob_vars['output folder']+"/tmp"):
-            #globals are released in finally: block
             return
         
         #create the new tmp directory
@@ -88,23 +98,47 @@ class hostManager:
         
         self.__settings_manager.set({"tmp dir":glob_vars['output folder']+"/tmp"})
         
-        #remove the old tmp dir when it is empty
+        #add the old tmp dir to the list of directories to be removed (it will be removed when it is empty)
         if glob_vars['tmp dir'] != None and os.path.exists(glob_vars['tmp dir']) and glob_vars['tmp dir'] != glob_vars['output folder']+"/tmp":
-            t=threading.Thread(target=self.__removeDir,args=(glob_vars['tmp dir'],))
-            self.__removal_threads=t #this variable is set to the last thread to be started
-            t.start()
+            def appendToList(list,value_to_append):
+                list.append(value_to_append)
+                return list
+                      
+            self.__settings_manager.operate("hostManager dirs to remove",appendToList,glob_vars['tmp dir'])
  
     ##############################################################################################                                   
      
-    def __removeDir(self,dir):
+    def __removeDir(self):
         """
-        Blocks until the directory is empty and then removes it.
+        Removes old temporary directories when they are empty
         """
-        while (len(os.listdir(dir)) != 0):
-               time.sleep(3)
-       
-        os.rmdir(dir)
-         
+        #define a function for removing items from the list
+        
+        def removeFromList(list,value_to_remove):
+            list.remove(value_to_remove)
+            return list
+        
+        while self.__stay_alive:
+        
+            dirs_to_rm = self.__settings_manager.get(["hostManager dirs to remove"])["hostManager dirs to remove"]
+            i=0
+            while i < len(dirs_to_rm):
+                dir = dirs_to_rm[i]
+                
+                if not os.path.isdir(dir):
+                    #the directory no longer exists so we can remove it from the list
+                    self.__settings_manager.operate("hostManager dirs to remove",removeFromList,dir)
+                    i = i-1
+                elif (len(os.listdir(dir)) == 0):
+                    #the directory is empty so we can delete it and remove it from the list
+                    os.rmdir(dir)
+                    self.__settings_manager.operate("hostManager dirs to remove",removeFromList,dir)
+                    i = i-1
+                i = i+1
+            
+            #the directories don't have to be deleted immediately, so sleep for a bit
+            time.sleep(3)
+        
     ##############################################################################################                     
     
     def exit(self):
@@ -114,5 +148,6 @@ class hostManager:
         
         #wait for directory removal threads to finish
         if self.__removal_thread != None:
-            self.__removal_thread.join(10.0) #wait up to 10 seconds for thread to finish
+            self.__stay_alive = False
+            self.__removal_thread.join() #wait for thread to finish
     
