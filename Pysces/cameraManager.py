@@ -6,7 +6,7 @@ camera. This includes image capture, image download and settings updates.
 
 from subprocess import Popen,PIPE
 import string,datetime,time
-from task import taskQueueBase,Task
+from multitask import taskQueueBase,threadTask
 
 
 class cameraManagerBase(taskQueueBase):
@@ -100,8 +100,17 @@ class cameraManagerBase(taskQueueBase):
     
     def _captureImages(self):
         raise AttributeError, "cameraManagerBase must be sub-classed"
+      
+    ############################################################################################## 
+
+    def _isConnected(self):
+        raise AttributeError, "cameraManagerBase must be sub-classed"
      
-     ##############################################################################################
+    ##############################################################################################
+    def _downloadConfigs(self):
+        raise AttributeError, "cameraManagerBase must be sub-classed"
+     
+    ##############################################################################################
 ##############################################################################################
 
 class gphotoCameraManager(cameraManagerBase):
