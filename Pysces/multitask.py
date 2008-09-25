@@ -89,12 +89,48 @@ class taskQueueBase:
 ##############################################################################################       
         
 class processQueueBase():
+
     def __init__(self,workers = 1):
         #create a manager for creating shared objects
         self._manager = processing.Manager()
         
-        #create a pool of processes for handling tasks
-        self._processing_pool = processing.Pool(processes=workers)
+        #create an input queue
+        self._input_queue = Queue()
+        
+        self._process_count = 0
+        self._max_process_count = workers
+        self._active_processes = []
+        
+        self._stay_alive = True
+        
+        
+        #create a thread to read from the input queue and start tasks in their own process
+        self._input_thread = Thread(target = self._processTasks)
+        self._input_thread.start()
+    
+    def _processTasks(self):
+        while self._stay_alive or (not self._input_queue.empty()):
+            task = self._input_queue.get()
+            
+            #if task is None, then it means we should exit - go back to beginning of loop
+            if task == None:
+                continue    
+            
+            #otherwise wait for active process count to fall below max count
+            while self._process_count >= self._max_process_count:
+                i = 0
+                while i < len(self._active_processes):
+                    if not self._active_processes[i].isAlive():
+                        self._active_processes.pop(i)
+                        i = i - 1
+                        self._process_count = self._process_count - 1
+                    i = i + 1
+            
+            #create a new process to run the task
+            p = processing.Process(target = task.execute)
+            self._active_processes.append(p)
+            self._process_count = self._process_count +1
+            p.start()
 
     
     def createTask(self,func,*args,**kwargs):
@@ -104,12 +140,15 @@ class processQueueBase():
         return task
     
     def commitTask(self,task):
-        self._processing_pool.apply_async(task.execute)
+        self._input_queue.put(task)
     
     def exit(self):
+        self._stay_alive = False
+        self._input_queue.put(None)
+        self._input_thread.join()
         
-        self._processing_pool.close()
-        self._processing_pool.join()
+        for process in self._active_processes:
+            process.join()
         
         #kill the manager
         self._manager.shutdown()

@@ -3,8 +3,6 @@ from multitask import taskQueueBase,threadTask
 import time,threading,processing
 
 
-
-
 class mainBox(taskQueueBase):
     
     def __init__(self):
