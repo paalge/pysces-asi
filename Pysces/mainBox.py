@@ -9,7 +9,9 @@ class mainBox(taskQueueBase):
         self.__running = False
         
         #create settings manger object
-        self.__settings_manager = settingsManager.settingsManager()
+        self.manager = settingsManager.sharedSettings()
+        self.manager.start()
+        self.__settings_manager = self.manager.settingsManager()
         
         #create scheduler object
         self.__scheduler = scheduler.scheduler(self.__settings_manager)
@@ -80,6 +82,7 @@ class mainBox(taskQueueBase):
         self.__settings_manager.set({"output":"mainBox> Killing settings_manager"})
         try:
             self.__settings_manager.exit()
+            self.manager.shutdown()
         finally:
             #kill the mainBox worker thread
             taskQueueBase.exit(self)

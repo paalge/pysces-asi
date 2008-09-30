@@ -5,6 +5,7 @@ variables) for Pysces.
 import os
 import persist,settingsFileParser
 from multitask import taskQueueBase
+from processing.managers import BaseManager,CreatorMethod
 
 
         
@@ -417,4 +418,5 @@ class settingsManager(taskQueueBase):
            
     ##############################################################################################     
 ##############################################################################################           
-           
+class sharedSettings(BaseManager):
+    settingsManager = CreatorMethod(settingsManager)           

@@ -33,7 +33,7 @@ class cameraManagerBase(taskQueueBase):
     #define public methods
     def setCaptureMode(self,capture_mode):
         #create task
-        task = Task(self._setCaptureMode,capture_mode)
+        task = threadTask(self._setCaptureMode,capture_mode)
 
         #submit task
         self.commitTask(task)
@@ -45,7 +45,7 @@ class cameraManagerBase(taskQueueBase):
     
     def captureImages(self):
         #create task
-        task = Task(self._captureImages)
+        task = threadTask(self._captureImages)
         
         #submit task
         self.commitTask(task)
@@ -61,7 +61,7 @@ class cameraManagerBase(taskQueueBase):
         configs.
         """
         
-        task = Task(self.camera_configs.copy)
+        task = threadTask(self.camera_configs.copy)
         
         #submit task
         self.commitTask(task)
@@ -72,7 +72,7 @@ class cameraManagerBase(taskQueueBase):
     ############################################################################################## 
     
     def isConnected(self):
-        task = Task(self._isConnected)
+        task = threadTask(self._isConnected)
         
         #submit task
         self.commitTask(task)
@@ -83,7 +83,7 @@ class cameraManagerBase(taskQueueBase):
     ##############################################################################################   
      
     def downloadConfigs(self):
-        task = Task(self._downloadConfigs)
+        task = threadTask(self._downloadConfigs)
         
         #submit task
         self.commitTask(task)

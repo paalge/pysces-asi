@@ -1,4 +1,6 @@
 from multitask import taskQueueBase,processQueueBase,threadTask
+from processing.managers import SyncManager,CreatorMethod
+from PASKIL import allskyImage
 from outputTask import outputTaskBase
 import processing,time
 from networkManager import networkManager
@@ -10,7 +12,7 @@ class ShrdObjManager(SyncManager):
     Events, Namespaces etc...
     """
     ASI = CreatorMethod(allskyImage.new)
-    networkManger = CreatorMethod(networkManager)
+    networkManager = CreatorMethod(networkManager)
 
 ##############################################################################################  
 
@@ -28,7 +30,7 @@ class outputTaskHandler(taskQueueBase):
         self._processing_pool = processQueueBase(workers = processing.cpuCount())
         
         #create networkManager object to handle copying outputs to the webserver
-        self._network_manager = self._manager.networkManager(settings_manager)        
+        self._network_manager = self._manager.networkManager(None)        
 
     ##############################################################################################  
 

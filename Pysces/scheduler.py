@@ -44,9 +44,9 @@ class scheduler:
         self.__createObservatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
         
         #register callback functions for observatory parameters
-        self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
-        self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
-        self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
+        #self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
+        #self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
+        #self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
         
     ##############################################################################################        
    

@@ -1,4 +1,5 @@
-from threading import Event,Thread
+from threading import Event,Thread,currentThread
+import traceback
 import processing
 from processing.managers import SyncManager,CreatorMethod
 from Queue import Queue
@@ -23,7 +24,9 @@ class threadTask:
             self._return_value = self._function(*self._args,**self._kwargs)
         
         except Exception,self._exception:
-            pass
+            print "\nException in thread: ",currentThread()
+            traceback.print_exc()
+
     
         #set the event to true, to show that the task is finished
         self._completed.set()
@@ -88,7 +91,7 @@ class taskQueueBase:
 
 ##############################################################################################       
         
-class processQueueBase():
+class processQueueBase:
 
     def __init__(self,workers = 1):
         #create a manager for creating shared objects

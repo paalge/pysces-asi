@@ -3,6 +3,8 @@ import Queue,datetime
 from dataStorageClasses import captureMode
 import hostManager,D80,outputTaskHandler
 from outputTask import createOutputTasks
+import traceback
+#from testCameraManager import D80Simulator
 
 class captureManager(taskQueueBase):
     
@@ -14,9 +16,11 @@ class captureManager(taskQueueBase):
             self._host_manager = hostManager.hostManager(settings_manager)
 
             self._camera_manager = D80.D80CameraManager(settings_manager)
+            #self._camera_manager = D80Simulator()
             self._output_task_handler = outputTaskHandler.outputTaskHandler(settings_manager)
 
         except Exception,ex:
+            traceback.print_exc()
             self.exit()
             raise ex
             
