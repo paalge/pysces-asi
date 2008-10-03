@@ -4,11 +4,195 @@ variables) for Pysces.
 """
 import os
 import persist,settingsFileParser
-from multitask import taskQueueBase
-from processing.managers import BaseManager,CreatorMethod
+from multitask import taskQueueBase,remoteTask
+from processing import Manager
+from threading import Thread
+import cPickle
 
+class settingsManagerProxy(taskQueueBase):
+    def __init__(self,id,input_queue,output_queue):
+        self.id = id
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.started = False
 
+    ##############################################################################################
+    
+    def start(self):
+        taskQueueBase.__init__(self)
+        self.started = True
         
+    ##############################################################################################    
+    
+    def exit(self):
+        """
+        Note that the exit method only kills the proxy, not the master. However, it does
+        remove the proxy from the master, closing the shared queue between them.
+        """
+        task = remoteTask(self.id,"destroy proxy",self.id)
+        
+        self.output_queue.put(task)
+        
+        taskQueueBase.exit(self)
+        
+    ##############################################################################################
+        
+    def get(self,name):
+        assert self.started
+        #create task
+        task = self.createTask(self._get,name)
+    
+        #submit task
+        self.commitTask(task)
+    
+        #return result when task has been completed
+        return task.result()
+
+    ##############################################################################################
+    
+    def create(self,name,value,persistant=False):
+        assert self.started
+        
+        #create task
+        task = self.createTask(self._create,name,value,persistant=persistant)
+    
+        #submit task
+        self.commitTask(task)
+    
+        #return result when task has been completed
+        return task.result()
+    
+    ##############################################################################################         
+    
+    def operate(self,name,func,*args,**kwargs):
+          
+        #create task
+        task = self.createTask(self.__operate,name,func,*args,**kwargs)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+            
+    ##############################################################################################     
+     
+    def register(self,name,callback, variables):
+        
+        #create task
+        task = self.createTask(self.__register,name,callback,variables)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()   
+             
+    ############################################################################################## 
+    
+    def set(self,variables):
+        
+        #check that variables is a list or tuple
+        if type(variables) != type(dict()):
+            raise TypeError,"Expecting dictionary containing name:value pairs"
+        
+        #create task
+        task = self.createTask(self.__set,variables)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+    
+    ############################################################################################## 
+    
+    def unregister(self,id):
+
+        #create task
+        task = self.createTask(self.__unregister,id)
+        
+         #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+    
+    ##############################################################################################    
+                
+    def __get(self,name):
+        task = remoteTask(self.id,"get",name)
+        
+        self.output_queue.put(task)
+        
+        result = self.input_queue.get()
+        
+        return result
+    
+    ##############################################################################################    
+    
+    def __set(self,variables):
+        task = remoteTask(self.id,"set",variables)
+        
+        self.output_queue.put(task)
+        result = self.input_queue.get()
+        
+        return result
+    
+    ##############################################################################################        
+    
+    def __create(self,name,value,persistant=False):
+        task = remoteTask(self.id,"create",name,value,persistant=persistant)
+        
+        self.output_queue.put(task)
+        
+        result = self.input_queue.get()
+        
+        return result
+
+    ##############################################################################################        
+    
+    def __operate(self,name,func,*args,**kwargs):
+        
+        #pickle the function into a string ready to be sent to remote object
+        pickled_func = func
+        task = remoteTask(self.id,"operate",pickled_func,*args,**kwargs)
+        
+        self.output_queue.put(task)
+        
+        result = self.input_queue.get()
+        
+        return result
+    
+    ##############################################################################################        
+    
+    def __register(self,name,callback, variables):    
+        
+        #pickle the function into a string ready to be sent to remote object
+        pickled_callback = cPickle.dumps(callback)
+        
+        task = remoteTask(self.id,"register",pickled_callback,variables)
+        
+        self.output_queue.put(task)
+        
+        result = self.input_queue.get()
+        
+        return result
+    
+    ##############################################################################################        
+        
+    def __unregister(self,id):
+        task = remoteTask(self.id,"unregister",id)
+        
+        self.output_queue.put(task)
+        
+        result = self.input_queue.get()
+        
+        return result 
+    
+    ##############################################################################################        
+##############################################################################################            
+           
 class settingsManager(taskQueueBase):
     """
     The settingsManager class is in charge of all global variables used in Pysces. It allows 
@@ -28,11 +212,21 @@ class settingsManager(taskQueueBase):
         
         taskQueueBase.__init__(self)
         
+        #define method to string mappings - notice that these should be the thread safe public methods!
+        self._methods = {"get":self.get,"set":self.set,"create":self.create,"register":self.register,"unregister":self.unregister,"operate":self.operate,"destroy proxy":self._commitDestroyProxy}
+        
+        self._manager = Manager()
+        self._remote_input_queue = self._manager.Queue()
+        #create thread to handle remote tasks
+        self.remote_task_thread = Thread(target = self._processRemoteTasks)
+        self.remote_task_thread.start()
+        
         try:
             #define private attributes
             self.__variables = {}
             self.__callbacks = {}
             self.__callback_ids = {}
+            self._output_queues = {}
             
             #hard code settings file location and create a parser
             home = os.path.expanduser("~")
@@ -59,7 +253,11 @@ class settingsManager(taskQueueBase):
                 self.__create(key,persistant_data[key],persistant=True)
         
         except Exception,ex:
+            #if an exception occurs then we need to shut down the threads and manager before exiting
             taskQueueBase.exit(self)
+            self._remote_input_queue.put(None)
+            self.remote_task_thread.join()
+            self._manager.shutdown()
             raise ex
                
     ##############################################################################################
@@ -128,6 +326,9 @@ class settingsManager(taskQueueBase):
             self.__settings_file_parser.updateSettingsFile(self.__variables)
         finally:
             taskQueueBase.exit(self)
+            self._remote_input_queue.put(None)
+            self.remote_task_thread.join()
+            self._manager.shutdown()
     
     ##############################################################################################    
     
@@ -309,14 +510,94 @@ class settingsManager(taskQueueBase):
         
         #return result when task has been completed
         return task.result()
-       
+    
+    ##############################################################################################     
+    
+    def createProxy(self):
+        """
+        Returns a proxy object for the settingsManager. This can be passed to other processes
+        allowing them to access and modify the global variables, i.e. it allows the global
+        variables to be shared across multiple processes. The proxy object is thread safe 
+        (it is also sub-classed from taskQueueBase). The proxy cannot be used to generate 
+        further proxies, so the child process cannot spawn its own child process and use its
+        proxy to generate a proxy to pass to it.
+        """
+        #create task
+        task = self.createTask(self._createProxy)
+        
+         #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()   
+    
     ##############################################################################################     
     ##############################################################################################   
     #define private methods - these are only executed by the settingsManager worker thread and the 
     #thread that calls __init__
     ##############################################################################################
     ##############################################################################################
+    
+    def _createProxy(self):
+        #create a unique ID for the proxy
+        current_ids = self._output_queues.keys()
         
+        if len(current_ids) > 0:
+            id = max(current_ids) + 1
+        else:
+            id = 0
+        
+        proxy_input_queue = self._manager.Queue()
+        
+        self._output_queues[id] = proxy_input_queue
+        
+        return settingsManagerProxy(id,proxy_input_queue,self._remote_input_queue)
+        
+##############################################################################################         
+    
+    def _commitDestroyProxy(self,id):
+        #create task
+        task = self.createTask(self._destroyProxy,id)
+        
+         #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+        
+##############################################################################################         
+    
+    def _destroyProxy(self,id):
+        """
+        Removes the queue shared with the specified proxy.
+        """
+        self._output_queues.pop(id)
+        
+##############################################################################################             
+        
+    def _processRemoteTasks(self):
+        """
+        This method is run in a separate thread. It pulls remote task objects out of the shared
+        queue object (shared between the master=this class, and all the proxys) and commits the
+        task to the internal task queue (by calling one of the public methods of the master class.
+        The result is returned to the proxy via another shared queue (only shared between one proxy
+        and the master).
+        """
+        while self._stay_alive:
+            remote_task = self._remote_input_queue.get()
+            
+            if remote_task == None:
+                continue
+            
+            result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+            
+            
+            if remote_task.method_name != "destroy proxy":
+                #if the proxy has been destroyed then this queue won't exist any more!
+                self._output_queues[remote_task.id].put(result)
+            
+    ##############################################################################################                
+    
     def __create(self,name,value,persistant=False):
 
         if self.__variables.has_key(name):
@@ -346,8 +627,15 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################           
     
-    def __operate(self,name,func,*args,**kwargs):
-
+    def __operate(self,name,sfunc,*args,**kwargs):
+        
+        #check if function has been pickled
+        if type(sfunc) == type(str()):
+            #if it has then unpickle it!
+            func = cPickle.loads(sfunc)
+        else:
+            func = sfunc
+        
         variable = self.__get([name])
         
         new_value = func(variable[name],*args,**kwargs)
@@ -356,7 +644,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################
     
-    def __register(self,name, callback, variables):
+    def __register(self,name, scallback, variables):
 
         #check that 'name' actually exists
         if not self.__variables.has_key(name):
@@ -367,6 +655,13 @@ class settingsManager(taskQueueBase):
             new_callback_id = max(self.__callback_ids.keys()) + 1
         except ValueError:
             new_callback_id = 0
+        
+        #check if callback function has been pickled
+        if type(scallback) == type(str()):
+            #if it has then unpickle it!
+            callback = cPickle.loads(scallback)
+        else:
+            callback = scallback
         
         #callback_ids dict maps callabck ids to callback functions
         self.__callback_ids[new_callback_id] = (callback,variables)
@@ -404,7 +699,10 @@ class settingsManager(taskQueueBase):
         for function,arguments in unique_callbacks:
             #get globals variables for callback
             arg_values = self.__get(arguments)
-            function(arg_values)
+            if len(arg_values) == 0:
+                function()
+            else:
+                function(arg_values)
             
     ##############################################################################################     
     
@@ -418,5 +716,4 @@ class settingsManager(taskQueueBase):
            
     ##############################################################################################     
 ##############################################################################################           
-class sharedSettings(BaseManager):
-    settingsManager = CreatorMethod(settingsManager)           
+           

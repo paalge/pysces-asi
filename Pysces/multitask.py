@@ -4,6 +4,15 @@ import processing
 from processing.managers import SyncManager,CreatorMethod
 from Queue import Queue
 
+
+class remoteTask:
+    def __init__(self,id,method,*args,**kwargs):
+        self.id = id
+        self.method_name = method
+        self.args = args
+        self.kwargs = kwargs
+
+
 ##############################################################################################
 
 class threadTask:
@@ -40,6 +49,7 @@ class threadTask:
         if self._exception == None:
             return self._return_value
         else:
+            traceback.print_exc()
             raise self._exception
 
 ##############################################################################################
