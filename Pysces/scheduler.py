@@ -37,6 +37,9 @@ class scheduler:
 
         self.__settings_manager = settings_manager
         
+        self.__sun = None
+        self.__moon = None
+        
         self.__running = False
         self.__current_capture_mode_name = None
         
@@ -44,9 +47,9 @@ class scheduler:
         self.__createObservatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
         
         #register callback functions for observatory parameters
-        #self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
-        #self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
-        #self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
+        self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
+        self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
+        self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
         
     ##############################################################################################        
    
@@ -56,7 +59,7 @@ class scheduler:
         to see which capture mode should be run. 
         """
         if self.__running:
-            raise RunTimeError,"Scheduler is already running!"
+            raise RuntimeError,"Scheduler is already running!"
         self.__running = True
         
         
@@ -64,7 +67,8 @@ class scheduler:
 
         
         #create sun and moon objects
-        self.__sun,self.__moon = ephem.Sun(),ephem.Moon()
+        self.__sun = ephem.Sun()
+        self.__moon = ephem.Moon()
         
         self.__settings_manager.set({"output":"scheduler> Waiting....."})
         
