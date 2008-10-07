@@ -3,7 +3,9 @@ This module defines all the functions used to create outputs by Pysces. It is pr
 of abstraction between the developer and the inner workings of Pysces, allowing them to easily
 define new outputs without having to worry about the complexities of object orientation.
 
-To create a new output type you must add a function to this file.
+To create a new output type you must add a function to this file and then include it in the 
+TYPES dictionary at the bottom of this file. The new output type is then available to use in 
+the settings file.
 
 All functions should accept an allskyImage object, an outputType object and a settingsManager
 object as their only three arguments.
@@ -19,18 +21,16 @@ object.
 import os
 import shutil
 
-        
-
 ##############################################################################################
 
 def copyImage(image,output,settings_manager):
     source_path = image.getFilename()
     source_filename = os.path.basename(source_path)
-    file,extension = os.path.splitext(source_filename)
+    file_,extension = os.path.splitext(source_filename)
     
-    day_folder = settings_manager.get(["output folder"])["folder on host"]
+    day_folder = settings_manager.get(["output folder"])["output folder"]
     
-    dest_path = day_folder + "/" + file + output.filename_suffix + extension
+    dest_path = os.path.normpath(day_folder + "/" +  output.folder_on_host + "/" + file_ + extension)
     
     #copy the image
     settings_manager.set({"output":"outputTaskHandler> Copying "+source_path+" to "+dest_path})
@@ -40,10 +40,21 @@ def copyImage(image,output,settings_manager):
 
 ##############################################################################################
 
-def doSomething(image,output,settings_manager):
-    print image.getInfo()
-    return None
+def createQuicklook(image,output,settings_manager):   
+    im = image.binaryMask(75)
+    im = im.centerImage()
+    im = im.alignNorth(north="geomagnetic")
+    ql = im.createQuicklook()
+    return ql
+
+##############################################################################################
+
+def centeredImage(image,output,settings_manager):
+    im = image.binaryMask(75)
+    im = im.centerImage()
+    im = im.alignNorth(north="geomagnetic")
+    return im 
 
 
 #dict to map output types to output functions.
-TYPES = {"raw":doSomething}
+TYPES = {"raw":copyImage,"quicklook":createQuicklook,"paskil_png":centeredImage}

@@ -8,10 +8,8 @@ class mainBox(taskQueueBase):
     def __init__(self):
         self.__running = False
         
-        #create settings manger object
-        self.manager = settingsManager.sharedSettings()
-        self.manager.start()
-        self.__settings_manager = self.manager.settingsManager()
+        #create settings manger object)
+        self.__settings_manager = settingsManager.settingsManager()
         
         #create scheduler object
         self.__scheduler = scheduler.scheduler(self.__settings_manager)

@@ -119,7 +119,7 @@ class gphotoCameraManager(cameraManagerBase):
     which can capture "NEF" and "jpeg" type images. 
     """
     
-    def __init__(self,settings_manager):
+    def __init__(self, settings_manager):
         self._settings_manager = settings_manager
         
         self._settings_manager.set({"output":"cameraManager> Downloading settings from camera - please wait"})
@@ -137,16 +137,11 @@ class gphotoCameraManager(cameraManagerBase):
         value_index = config.values[value]
         
         #run gphoto function in separate process
-        p = Popen("gphoto2 --set-config "+str(name)+"="+value_index,shell=True,stdout=PIPE)
-        
-        out = string.join(p.stdout.readlines())
-        
-        #wait for process to finish
+        p = Popen("gphoto2 --set-config "+str(name)+"="+value_index,shell=True)
         p.wait()
         
         if p.returncode != 0:
-
-                raise RuntimeError,"GPhoto2 Error: failed to set config"+name
+            raise RuntimeError,"GPhoto2 Error: failed to set config"+name
             
         self.camera_configs[name].current = value
         
@@ -164,8 +159,7 @@ class gphotoCameraManager(cameraManagerBase):
         p.wait()
 
         if p.returncode != 0:
-
-                raise RuntimeError,"GPhoto2 Error: failed to auto detect\n"+outerr
+            raise RuntimeError,"GPhoto2 Error: failed to auto detect\n"+outerr
  
         #split output into lines
         lines = out.split("\n")
@@ -179,17 +173,16 @@ class gphotoCameraManager(cameraManagerBase):
     
     def _deletePhotos(self,active_folder):
         #run gphoto command in separate process
-        p = Popen("gphoto2 -D --folder="+active_folder,shell=True,stdout=PIPE)
-        out = string.join(p.stdout.readlines())
+        p = Popen("gphoto2 -D --folder="+active_folder,shell=True)
         p.wait()
         
         if p.returncode != 0:
-
-                raise RuntimeError,"Gphoto2 Error: Unable to delete the image(s) from camera card"
+            raise RuntimeError,"Gphoto2 Error: Unable to delete the image(s) from camera card"
     
     ##############################################################################################    
     
     def _takePhoto(self,number_of_images):
+        
         #get list of files on camera
         #run gphoto function in separate process
         p = Popen("gphoto2 -L ",shell=True,stdout=PIPE)
@@ -199,37 +192,31 @@ class gphotoCameraManager(cameraManagerBase):
         p.wait()
         
         if p.returncode != 0:
-
-                raise RuntimeError,"Gphoto2 Error: Unable to list of files on camera card"
+            raise RuntimeError,"Gphoto2 Error: Unable to list of files on camera card"
         
         pre_image_list = pre_image_out.split("\n")
         
         time_of_capture = datetime.datetime.utcnow()
         self._settings_manager.set({"output": "cameraManager> Capturing image."})
         
-        p = Popen("gphoto2 --capture-image ",shell=True,stdout=PIPE)
-        out = string.join(p.stdout.readlines())
+        p = Popen("gphoto2 --capture-image ",shell=True)
         p.wait()
-       
+        
         if p.returncode != 0:
-
-                raise RuntimeError, "Gphoto2 Error: Failed to capture image"
-       
+            raise RuntimeError, "Gphoto2 Error: Failed to capture image"
+        
         #wait for the image to be stored for up to one minute
-        flag=False
+        flag = False
         while (time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.utcnow()) and (not flag):
-           
             time.sleep(10)
             #get list of files on camera
             #run gphoto function in separate process
             p = Popen("gphoto2 -L ",shell=True,stdout=PIPE)
             post_image_out = string.join(p.stdout.readlines())
-            
-            #wait for process to finish
             p.wait()
-            if p.returncode != 0:
 
-                    raise RuntimeError,"Gphoto2 Error: Unable to list of files on camera card"
+            if p.returncode != 0:
+                raise RuntimeError,"Gphoto2 Error: Unable to list of files on camera card"
                 
             if post_image_out == pre_image_out:
                 continue
@@ -255,7 +242,7 @@ class gphotoCameraManager(cameraManagerBase):
                         except NameError:
                             pass
    
-                #if image has not been stored yet, then wait longer
+                #if image has not been stored yet, then wait longer               
                 if folder_filecount < number_of_images:
                     continue
                 elif folder_filecount == number_of_images:
@@ -281,13 +268,11 @@ class gphotoCameraManager(cameraManagerBase):
         glob_vars = self._settings_manager.get(['tmp dir','filename_format'])
         
         self._settings_manager.set({"output": "cameraManager> Downloading image(s)"})
-        p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True,stdout=PIPE)
-        out = string.join(p.stdout.readlines())
+        p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"",shell=True)
         p.wait()
         
         if p.returncode != 0:
-
-                raise RuntimeError,"Gphoto2 Error: Unable to copy the photos from the camera card"
+            raise RuntimeError,"Gphoto2 Error: Unable to copy the photos from the camera card"
         
         
     ##############################################################################################            
@@ -302,15 +287,12 @@ class gphotoCameraManager(cameraManagerBase):
 
         #get list of possible configs for camera
         #run gphoto function in separate process
-        p = Popen("gphoto2 --list-config",shell=True,stdout=PIPE)
-        
+        p = Popen("gphoto2 --list-config",shell=True,stdout=PIPE)       
         out = string.join(p.stdout.readlines())
-        
-        #wait for process to finish
         p.wait()
+        
         if p.returncode != 0:
-
-                raise RuntimeError,"Gphoto2 Error: Unable to download the list of configs"
+            raise RuntimeError,"Gphoto2 Error: Unable to download the list of configs"
             
         #split output into lines
         lines = out.split("\n")
@@ -358,8 +340,7 @@ class gphotoCameraManager(cameraManagerBase):
         p.wait()
   
         if p.returncode != 0:
-
-                raise RuntimeError,"GPhoto2 Error: failed to download config"+name
+            raise RuntimeError,"GPhoto2 Error: failed to download config"+name
             
         #split config values into lines
         config_lines = out.split("\n")

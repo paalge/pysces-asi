@@ -2,6 +2,7 @@ from multitask import taskQueueBase,threadTask
 import Queue,datetime
 from dataStorageClasses import captureMode
 import hostManager,D80,outputTaskHandler
+from testCameraManager import D80Simulator
 from outputTask import createOutputTasks
 import traceback
 #from testCameraManager import D80Simulator
@@ -87,8 +88,11 @@ class captureManager(taskQueueBase):
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
-                    capture_mode = self._task_queue.get(timeout=(datetime.datetime.utcnow() - start_time < datetime.timedelta(seconds=capture_mode.delay)))
-                    print "capture manager got: ",capture_mode
+                    remaining_delay_time = (datetime.timedelta(seconds=capture_mode.delay) - (datetime.datetime.utcnow() - start_time)).seconds
+                    if remaining_delay_time < 0:
+                        remaining_delay_time = 0
+                    
+                    capture_mode = self._task_queue.get(timeout=remaining_delay_time)
                     self._task_queue.task_done()
                     continue
                 except Queue.Empty:

@@ -56,24 +56,21 @@ class hostManager:
 
         
         #create Pysces sub_directories
-        outputs = []
+        output_folders = set([])
         
-        #look at which files are needed in the outputs for this capture mode
+        #look at which folders are needed in the outputs for this capture mode
         if capture_mode != None:
             for output in capture_mode.outputs:
-                outputs.append(output.type)
-
-        if outputs.count("quicklook") != 0 and not os.path.exists(current_folder + "/Quicklooks"):
-            os.mkdir(current_folder + "/Quicklooks")
-        
-        if outputs.count("raw") != 0 and not os.path.exists(current_folder + "/Raw"):
-            os.mkdir(current_folder + "/Raw")        
-
-        if outputs.count("image") != 0 and not os.path.exists(current_folder + "/Images"):
-            os.mkdir(current_folder + "/Images")
-
-        if outputs.count("map") != 0 and not os.path.exists(current_folder + "/Maps"):
-            os.mkdir(current_folder + "/Maps")
+                output_folders.add(output.folder_on_host)
+            
+            #create the folders
+            for sub_folder in output_folders:
+                #skip blank folder names
+                if ((sub_folder == None) or (sub_folder == "")):
+                    continue
+                
+                if not os.path.exists(os.path.normpath(current_folder + "/" + sub_folder)):
+                    os.mkdir(os.path.normpath(current_folder + "/" + sub_folder))
            
         #update output folder variable
         self.__settings_manager.set({"output folder":current_folder})
@@ -100,9 +97,9 @@ class hostManager:
         
         #add the old tmp dir to the list of directories to be removed (it will be removed when it is empty)
         if glob_vars['tmp dir'] != None and os.path.exists(glob_vars['tmp dir']) and glob_vars['tmp dir'] != glob_vars['output folder']+"/tmp":
-            def appendToList(list,value_to_append):
-                list.append(value_to_append)
-                return list
+            def appendToList(l,value_to_append):
+                l.append(value_to_append)
+                return l
                       
             self.__settings_manager.operate("hostManager dirs to remove",appendToList,glob_vars['tmp dir'])
  
@@ -114,9 +111,9 @@ class hostManager:
         """
         #define a function for removing items from the list
         
-        def removeFromList(list,value_to_remove):
-            list.remove(value_to_remove)
-            return list
+        def removeFromList(l,value_to_remove):
+            l.remove(value_to_remove)
+            return l
         
         while self.__stay_alive:
         

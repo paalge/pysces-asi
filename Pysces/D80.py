@@ -4,6 +4,13 @@ from cameraManager import gphotoCameraManager
 
 
 class D80CameraManager(gphotoCameraManager):
+    def __init__(self, settings_manager):
+        gphotoCameraManager.__init__(self, settings_manager)
+        
+        #ensure that the camera is set to capture to the card, rather than the RAM
+        if self.camera_configs['capturetarget'].current != "Memory card":
+            self._setConfig('capturetarget', 'Memory card')
+    
     
     def _setCaptureMode(self,capture_mode):
         #set camera configs based on capture mode settings
@@ -14,9 +21,10 @@ class D80CameraManager(gphotoCameraManager):
         #work out what the imgquality config should be set to based on the image types in the outputs
         files=[]
         for output in capture_mode.outputs:
-            files.append(output.image_type)
+            files.append(output.image_type.image_type)
+        
         get_raw = False
-        get_jpeg = True
+        get_jpeg = False
         
         if files.count("NEF") != 0:
             get_raw = True
@@ -118,10 +126,11 @@ class D80CameraManager(gphotoCameraManager):
         info['camera']['x_center'] = image.x_center
         info['camera']['Radius'] = image.Radius
         info['header']['Wavelength'] = image.Wavelength
-        info['header']['Creation Time'] = capture_time.strftime("%d %b %Y %H:%M:%S %Z")
+        info['header']['Creation Time'] = capture_time.strftime("%d %b %Y %H:%M:%S")+" GMT"
         
         info['camera']['lat'] = glob_vars['latitude']
         info['camera']['lon'] = glob_vars['longitude']
+        info['camera']['Magn. Bearing'] = glob_vars['magnetic_bearing']
         info['camera']['lens_projection'] = glob_vars['lens_projection']
         info['camera']['cam_rot'] = glob_vars['camera_rotation']
         info['camera']['fov_angle'] = glob_vars['fov_angle']

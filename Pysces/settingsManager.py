@@ -7,7 +7,6 @@ import persist,settingsFileParser
 from multitask import taskQueueBase,remoteTask
 from processing import Manager
 from threading import Thread
-import cPickle
 
 class settingsManagerProxy(taskQueueBase):
     def __init__(self,id,input_queue,output_queue):
@@ -40,7 +39,7 @@ class settingsManagerProxy(taskQueueBase):
     def get(self,name):
         assert self.started
         #create task
-        task = self.createTask(self._get,name)
+        task = self.createTask(self.__get,name)
     
         #submit task
         self.commitTask(task)
@@ -54,39 +53,13 @@ class settingsManagerProxy(taskQueueBase):
         assert self.started
         
         #create task
-        task = self.createTask(self._create,name,value,persistant=persistant)
+        task = self.createTask(self.__create,name,value,persistant=persistant)
     
         #submit task
         self.commitTask(task)
     
         #return result when task has been completed
         return task.result()
-    
-    ##############################################################################################         
-    
-    def operate(self,name,func,*args,**kwargs):
-          
-        #create task
-        task = self.createTask(self.__operate,name,func,*args,**kwargs)
-        
-        #submit task
-        self.commitTask(task)
-        
-        #return result when task has been completed
-        return task.result()
-            
-    ##############################################################################################     
-     
-    def register(self,name,callback, variables):
-        
-        #create task
-        task = self.createTask(self.__register,name,callback,variables)
-        
-        #submit task
-        self.commitTask(task)
-        
-        #return result when task has been completed
-        return task.result()   
              
     ############################################################################################## 
     
@@ -627,14 +600,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################           
     
-    def __operate(self,name,sfunc,*args,**kwargs):
-        
-        #check if function has been pickled
-        if type(sfunc) == type(str()):
-            #if it has then unpickle it!
-            func = cPickle.loads(sfunc)
-        else:
-            func = sfunc
+    def __operate(self,name,func,*args,**kwargs):
         
         variable = self.__get([name])
         
@@ -644,7 +610,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################
     
-    def __register(self,name, scallback, variables):
+    def __register(self,name, callback, variables):
 
         #check that 'name' actually exists
         if not self.__variables.has_key(name):
@@ -655,13 +621,6 @@ class settingsManager(taskQueueBase):
             new_callback_id = max(self.__callback_ids.keys()) + 1
         except ValueError:
             new_callback_id = 0
-        
-        #check if callback function has been pickled
-        if type(scallback) == type(str()):
-            #if it has then unpickle it!
-            callback = cPickle.loads(scallback)
-        else:
-            callback = scallback
         
         #callback_ids dict maps callabck ids to callback functions
         self.__callback_ids[new_callback_id] = (callback,variables)
