@@ -88,7 +88,12 @@ class captureManager(taskQueueBase):
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
-                    remaining_delay_time = (datetime.timedelta(seconds=capture_mode.delay) - (datetime.datetime.utcnow() - start_time)).seconds
+                    #if the delay time has already been exceeded then set remaining delay to 0
+                    #otherwise it will be negative and cause problems
+                    if (datetime.datetime.utcnow() - start_time) > datetime.timedelta(seconds=capture_mode.delay):
+                        remaining_delay_time = 0
+                    else:
+                        remaining_delay_time = (datetime.timedelta(seconds=capture_mode.delay) - (datetime.datetime.utcnow() - start_time)).seconds
                     if remaining_delay_time < 0:
                         remaining_delay_time = 0
                     

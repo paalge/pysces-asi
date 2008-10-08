@@ -51,7 +51,11 @@ def _processSubTask(sub_task, settings_manager_proxy, network_manager_proxy):
         
         #save the output on the host
         if output != None:
-            output.save(sub_task.output_filename)
+            try:
+                output.save(sub_task.output_filename)
+            except AttributeError:
+                #this is added for compatibility with matplotlib figure objects
+                output.savefig(sub_task.output_filename)
         
         #copy the output to the server if required
         if sub_task.file_on_server != None:
@@ -175,9 +179,9 @@ class outputTaskBase:
                 self._running_subtasks.append(task)
                 processing_pool.commitTask(task)
             
-            #start a new thread to remove the temporary image files when all sub_tasks are complete
-            self._removal_thread = threading.Thread(target = self._exit)
-            self._removal_thread.start()
+        #start a new thread to remove the temporary image files when all sub_tasks are complete
+        self._removal_thread = threading.Thread(target = self._exit)
+        self._removal_thread.start()
             
     ##############################################################################################  
     

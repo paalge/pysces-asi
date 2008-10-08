@@ -20,6 +20,9 @@ object.
 
 import os
 import shutil
+import datetime
+
+from PASKIL import allskyKeo
 
 ##############################################################################################
 
@@ -55,6 +58,35 @@ def centeredImage(image,output,settings_manager):
     im = im.alignNorth(north="geomagnetic")
     return im 
 
+##############################################################################################
 
+def realtimeKeogram(image,output,settings_manager):
+    #see if a realtime keogram has been created yet
+    try:
+        filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']
+    except KeyError:
+        filename = None
+    
+    if filename == None:
+        
+        #work out the start and end times for the keogram based on the setting in the settings file
+        end_time = datetime.datetime.utcnow()
+        time_span = datetime.timedelta(hours = output.time_range)
+        start_time = end_time - time_span
+             
+        keo = allskyKeo.blankKeogram(image,output.angle,start_time,end_time,output.strip_width,output.data_spacing)
+        keo = keo.roll([image])      
+        keo.save(os.path.expanduser('~')+"/realtime_keogram")
+        
+        settings_manager.create('user_rt_keo_name', os.path.expanduser('~')+"/realtime_keogram", persistant=True)
+        
+    else:
+        keo = allskyKeo.load(filename)
+        keo.roll([image])
+        keo.save(filename)
+
+    return allskyKeo.plotKeograms([keo])
+    
+ 
 #dict to map output types to output functions.
-TYPES = {"raw":copyImage,"quicklook":createQuicklook,"paskil_png":centeredImage}
+TYPES = {"raw":copyImage,"quicklook":createQuicklook,"paskil_png":centeredImage, "realtimeKeo":realtimeKeogram}
