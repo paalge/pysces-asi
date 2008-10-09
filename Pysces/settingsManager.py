@@ -78,19 +78,6 @@ class settingsManagerProxy(taskQueueBase):
         #return result when task has been completed
         return task.result()
     
-    ############################################################################################## 
-    
-    def unregister(self,id):
-
-        #create task
-        task = self.createTask(self.__unregister,id)
-        
-         #submit task
-        self.commitTask(task)
-        
-        #return result when task has been completed
-        return task.result()
-    
     ##############################################################################################    
                 
     def __get(self,name):
@@ -122,46 +109,6 @@ class settingsManagerProxy(taskQueueBase):
         result = self.input_queue.get()
         
         return result
-
-    ##############################################################################################        
-    
-    def __operate(self,name,func,*args,**kwargs):
-        
-        #pickle the function into a string ready to be sent to remote object
-        pickled_func = func
-        task = remoteTask(self.id,"operate",pickled_func,*args,**kwargs)
-        
-        self.output_queue.put(task)
-        
-        result = self.input_queue.get()
-        
-        return result
-    
-    ##############################################################################################        
-    
-    def __register(self,name,callback, variables):    
-        
-        #pickle the function into a string ready to be sent to remote object
-        pickled_callback = cPickle.dumps(callback)
-        
-        task = remoteTask(self.id,"register",pickled_callback,variables)
-        
-        self.output_queue.put(task)
-        
-        result = self.input_queue.get()
-        
-        return result
-    
-    ##############################################################################################        
-        
-    def __unregister(self,id):
-        task = remoteTask(self.id,"unregister",id)
-        
-        self.output_queue.put(task)
-        
-        result = self.input_queue.get()
-        
-        return result 
     
     ##############################################################################################        
 ##############################################################################################            

@@ -1,8 +1,9 @@
 from __future__ import with_statement
-from cameraManager import cameraManagerBase
+
 import time
 import cPickle
 
+from cameraManager import cameraManagerBase
 
 class D80Simulator(cameraManagerBase):
        
@@ -44,7 +45,7 @@ class D80Simulator(cameraManagerBase):
     ##############################################################################################
     def _downloadConfigs(self):
         time.sleep(10)
-        with open("test_camera_configs","rb") as fp:
+        with open("Pysces/test_camera_configs","rb") as fp:
             configs = cPickle.load(fp)
         
         return configs

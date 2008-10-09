@@ -74,8 +74,7 @@ def realtimeKeogram(image,output,settings_manager):
         time_span = datetime.timedelta(hours = output.time_range)
         start_time = end_time - time_span
              
-        keo = allskyKeo.blankKeogram(image,output.angle,start_time,end_time,output.strip_width,output.data_spacing)
-        keo = keo.roll([image])      
+        keo = allskyKeo.new([image],output.angle,start_time,end_time,output.strip_width,output.data_spacing)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
         
         settings_manager.create('user_rt_keo_name', os.path.expanduser('~')+"/realtime_keogram", persistant=True)
@@ -86,7 +85,8 @@ def realtimeKeogram(image,output,settings_manager):
         keo.save(filename)
 
     return allskyKeo.plotKeograms([keo])
-    
+
+##############################################################################################    
  
 #dict to map output types to output functions.
 TYPES = {"raw":copyImage,"quicklook":createQuicklook,"paskil_png":centeredImage, "realtimeKeo":realtimeKeogram}

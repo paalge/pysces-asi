@@ -4,7 +4,7 @@ or after any changes to the code. The modules_to_doctest variable must be update
 """
 
 import unittest
-import doctest
+import doctest,sys
 
 #list of all modules in the Pysces package to be tested 
 modules_to_doctest = ["settingsManager","captureManager"]
