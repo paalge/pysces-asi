@@ -44,7 +44,7 @@ def copyImage(image,output,settings_manager):
 ##############################################################################################
 
 def createQuicklook(image,output,settings_manager):   
-    im = image.binaryMask(75)
+    im = image.binaryMask(output.fov_angle)
     im = im.centerImage()
     im = im.alignNorth(north="geomagnetic")
     ql = im.createQuicklook()
@@ -53,7 +53,7 @@ def createQuicklook(image,output,settings_manager):
 ##############################################################################################
 
 def centeredImage(image,output,settings_manager):
-    im = image.binaryMask(75)
+    im = image.binaryMask(output.fov_angle)
     im = im.centerImage()
     im = im.alignNorth(north="geomagnetic")
     return im 
@@ -66,6 +66,8 @@ def realtimeKeogram(image,output,settings_manager):
         filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']
     except KeyError:
         filename = None
+    
+    image = image.binaryMask(output.fov_angle)
     
     if filename == None:
         
