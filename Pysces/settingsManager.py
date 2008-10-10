@@ -87,6 +87,9 @@ class settingsManagerProxy(taskQueueBase):
         
         result = self.input_queue.get()
         
+        if isinstance(result,Exception):
+            raise result
+        
         return result
     
     ##############################################################################################    
@@ -96,6 +99,9 @@ class settingsManagerProxy(taskQueueBase):
         
         self.output_queue.put(task)
         result = self.input_queue.get()
+        
+        if isinstance(result,Exception):
+            raise result
         
         return result
     
@@ -107,6 +113,9 @@ class settingsManagerProxy(taskQueueBase):
         self.output_queue.put(task)
         
         result = self.input_queue.get()
+        
+        if isinstance(result,Exception):
+            raise result
         
         return result
     
@@ -509,12 +518,17 @@ class settingsManager(taskQueueBase):
             if remote_task == None:
                 continue
             
-            result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+            try:
+                result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+                if remote_task.method_name != "destroy proxy":
+                    #if the proxy has been destroyed then this queue won't exist any more!
+                    self._output_queues[remote_task.id].put(result)
             
+            except Exception,ex:
             
-            if remote_task.method_name != "destroy proxy":
-                #if the proxy has been destroyed then this queue won't exist any more!
-                self._output_queues[remote_task.id].put(result)
+                if remote_task.method_name != "destroy proxy":
+                    #if the proxy has been destroyed then this queue won't exist any more!
+                    self._output_queues[remote_task.id].put(ex)
             
     ##############################################################################################                
     

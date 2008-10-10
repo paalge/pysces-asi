@@ -1,15 +1,19 @@
 from __future__ import with_statement
 
-from subprocess import Popen,PIPE
 import os
 import string
 import stat
 import shutil
+
 from processing import Manager
 from threading import Thread
-from multitask import taskQueueBase,remoteTask
+from subprocess import Popen, PIPE
+
+from multitask import taskQueueBase, remoteTask
+
 
 class networkManagerProxy(taskQueueBase):
+    
     def __init__(self,id,input_queue,output_queue):
         self.id = id
         self.input_queue = input_queue
@@ -47,6 +51,8 @@ class networkManagerProxy(taskQueueBase):
     
         #return result when task has been completed
         return task.result()
+
+    ##############################################################################################
     
     def __copyToServer(self,source,destination):
         task = remoteTask(self.id,"copyToServer",source,destination)
@@ -55,7 +61,13 @@ class networkManagerProxy(taskQueueBase):
         
         result = self.input_queue.get()
         
+        if isinstance(result,Exception):
+            raise result
+        
         return result
+
+    ##############################################################################################
+##############################################################################################
 
 
 class networkManager(taskQueueBase):
@@ -81,8 +93,7 @@ class networkManager(taskQueueBase):
         self._mountServer()
 
     ##############################################################################################                 
-##############################################################################################         
-    
+            
     def _commitDestroyProxy(self,id):
         #create task
         task = self.createTask(self._destroyProxy,id)
@@ -92,6 +103,8 @@ class networkManager(taskQueueBase):
         
         #return result when task has been completed
         return task.result()
+
+    ##############################################################################################
       
     def _isMounted(self):
         glob_vars = self.__settings_manager.get(["web_server"])
@@ -136,10 +149,22 @@ class networkManager(taskQueueBase):
             os.remove(home+"/.Pysces/mount-script.sh")
             
             self.__awaiting_password = False
-    
-    ##############################################################################################            
+            
+    ##############################################################################################
     
     def copyToServer(self,source,dest):
+        #create task
+        task = self.createTask(self._copyToServer,source,dest)
+        
+        #submit task
+        self.commitTask(task)
+        
+        #return result when task has been completed
+        return task.result()
+                    
+    ##############################################################################################            
+    
+    def _copyToServer(self,source,dest):
         folder_on_server = self.__settings_manager.get(["web_dir"])["web_dir"]
         os.chmod(source,stat.S_IRWXU+stat.S_IRWXO+stat.S_IRWXG)
         shutil.copyfile(source,os.path.normpath(self._mount_point + "/" + folder_on_server + "/" + dest))
@@ -166,7 +191,7 @@ class networkManager(taskQueueBase):
     def _processRemoteTasks(self):
         """
         This method is run in a separate thread. It pulls remote task objects out of the shared
-        queue object (shared between the master=this class, and all the proxys) and commits the
+        queue object (shared between the master(=this class), and all the proxies) and commits the
         task to the internal task queue (by calling one of the public methods of the master class.
         The result is returned to the proxy via another shared queue (only shared between one proxy
         and the master).
@@ -177,16 +202,20 @@ class networkManager(taskQueueBase):
             if remote_task == None:
                 continue
             
-            result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+            try:
+                result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+                if remote_task.method_name != "destroy proxy":
+                    #if the proxy has been destroyed then this queue won't exist any more!
+                    self._output_queues[remote_task.id].put(result)
             
+            except Exception,ex:
             
-            if remote_task.method_name != "destroy proxy":
-                #if the proxy has been destroyed then this queue won't exist any more!
-                self._output_queues[remote_task.id].put(result)
+                if remote_task.method_name != "destroy proxy":
+                    #if the proxy has been destroyed then this queue won't exist any more!
+                    self._output_queues[remote_task.id].put(ex)
             
     ############################################################################################## 
-        ##############################################################################################     
-    
+   
     def createProxy(self):
 
         #create task
@@ -214,5 +243,7 @@ class networkManager(taskQueueBase):
         self._output_queues[id] = proxy_input_queue
         
         return networkManagerProxy(id,proxy_input_queue,self._remote_input_queue)
-    
+
+    ##############################################################################################
+##############################################################################################    
                
