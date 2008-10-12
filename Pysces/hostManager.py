@@ -1,8 +1,12 @@
-import os,datetime,time,threading
+import os
+import datetime
+import time
+import threading
+
 
 class hostManager:
     
-    def __init__(self,settings_manager):
+    def __init__(self, settings_manager):
         
         self.__old_tmp_dir = None
         self.__removal_thread = None
@@ -11,14 +15,14 @@ class hostManager:
         self.__stay_alive = True
         
         #create variables
-        settings_manager.create("output folder","")
+        settings_manager.create("output folder", "")
         try:
-            settings_manager.create("tmp dir",None,persistant=True)
+            settings_manager.create("tmp dir", None, persistant=True)
         except ValueError:
             pass
         
         try:
-            settings_manager.create("hostManager dirs to remove",[],persistant=True)
+            settings_manager.create("hostManager dirs to remove", [], persistant=True)
         except ValueError:
             pass 
         
@@ -28,15 +32,15 @@ class hostManager:
         
     ############################################################################################## 
              
-    def updateFolders(self,capture_mode):
+    def updateFolders(self, capture_mode):
 
         #get required global variables
-        glob_vars = self.__settings_manager.get(["folder_on_host","year_folder_format","month_folder_format","day_folder_format"])
+        glob_vars = self.__settings_manager.get(["folder_on_host", "year_folder_format", "month_folder_format", "day_folder_format"])
 
         today = datetime.datetime.utcnow()
         folders=[glob_vars['folder_on_host']]
         
-        for format in [glob_vars['year_folder_format'],glob_vars['month_folder_format'],glob_vars['day_folder_format']]: 
+        for format in [glob_vars['year_folder_format'], glob_vars['month_folder_format'], glob_vars['day_folder_format']]: 
             if format != None:
                 folders.append(today.strftime(format))
         
@@ -82,7 +86,7 @@ class hostManager:
 
     def createTmpDir(self):
         
-        glob_vars = self.__settings_manager.get(["tmp dir","output folder"])
+        glob_vars = self.__settings_manager.get(["tmp dir", "output folder"])
 
         
         #if the new tmp dir is the same as the old one and still exists then return
@@ -97,11 +101,11 @@ class hostManager:
         
         #add the old tmp dir to the list of directories to be removed (it will be removed when it is empty)
         if glob_vars['tmp dir'] != None and os.path.exists(glob_vars['tmp dir']) and glob_vars['tmp dir'] != glob_vars['output folder']+"/tmp":
-            def appendToList(l,value_to_append):
+            def appendToList(l, value_to_append):
                 l.append(value_to_append)
                 return l
                       
-            self.__settings_manager.operate("hostManager dirs to remove",appendToList,glob_vars['tmp dir'])
+            self.__settings_manager.operate("hostManager dirs to remove", appendToList, glob_vars['tmp dir'])
  
     ##############################################################################################                                   
      
@@ -111,7 +115,7 @@ class hostManager:
         """
         #define a function for removing items from the list
         
-        def removeFromList(l,value_to_remove):
+        def removeFromList(l, value_to_remove):
             l.remove(value_to_remove)
             return l
         
@@ -124,12 +128,12 @@ class hostManager:
                 
                 if not os.path.isdir(dir):
                     #the directory no longer exists so we can remove it from the list
-                    self.__settings_manager.operate("hostManager dirs to remove",removeFromList,dir)
+                    self.__settings_manager.operate("hostManager dirs to remove", removeFromList, dir)
                     i = i-1
                 elif (len(os.listdir(dir)) == 0):
                     #the directory is empty so we can delete it and remove it from the list
                     os.rmdir(dir)
-                    self.__settings_manager.operate("hostManager dirs to remove",removeFromList,dir)
+                    self.__settings_manager.operate("hostManager dirs to remove", removeFromList, dir)
                     i = i-1
                 i = i+1
             

@@ -5,7 +5,7 @@ import string
 import stat
 import shutil
 
-from processing import Manager
+from multiprocessing import Manager
 from threading import Thread
 from subprocess import Popen, PIPE
 

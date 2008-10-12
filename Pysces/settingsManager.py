@@ -7,7 +7,7 @@ documentation for the operate() method for an example of what not to do!
 """
 import os
 
-from processing import Manager
+from multiprocessing import Manager
 from threading import Thread
 
 import persist, settingsFileParser

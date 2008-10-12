@@ -1,6 +1,8 @@
+import threading
+import multiprocessing
+
 import settingsManager,scheduler
 from multitask import taskQueueBase,threadTask
-import time,threading,processing
 
 
 class mainBox(taskQueueBase):
@@ -41,7 +43,7 @@ class mainBox(taskQueueBase):
             return t
             
         else:
-            raise RunTimeError, "Cannont start more than one scheduler!"
+            raise RuntimeError, "Cannont start more than one scheduler!"
         
     ############################################################################################## 
     
@@ -80,7 +82,6 @@ class mainBox(taskQueueBase):
         self.__settings_manager.set({"output":"mainBox> Killing settings_manager"})
         try:
             self.__settings_manager.exit()
-            self.manager.shutdown()
         finally:
             #kill the mainBox worker thread
             taskQueueBase.exit(self)
@@ -132,4 +133,4 @@ if __name__ == '__main__':
             print thread._Thread__target
         
         print "Un-joined child processes:"
-        print processing.activeChildren()
+        print multiprocessing.active_children()

@@ -1,4 +1,4 @@
-import processing
+import multiprocessing
 
 from multitask import taskQueueBase, threadTask,processQueueBase
 from PASKIL import allskyImage
@@ -6,13 +6,13 @@ from outputTask import outputTaskBase
 import networkManager
 
 
-class ShrdObjManager(processing.managers.SyncManager):
+class ShrdObjManager(multiprocessing.managers.SyncManager):
     """
     Manager class for creating shared allskyImage objects. Note that it inherits from SyncManager
     rather than BaseManager, so it can also be used for creating other shared objects such as
     Events, Namespaces etc...
     """
-    ASI = processing.managers.CreatorMethod(allskyImage.new)
+    ASI = multiprocessing.managers.CreatorMethod(allskyImage.new)
 
 
 ##############################################################################################  
@@ -29,14 +29,13 @@ class outputTaskHandler(taskQueueBase):
         self._manager.start()
         
         #create a processing pool to produce the outputs asyncronously - this has as many workers as there are CPU cores
-        self._processing_pool = processQueueBase(workers=processing.cpuCount())
+        self._processing_pool = processQueueBase(workers=multiprocessing.cpuCount())
         
         #create a processing pool to produce outputs in the order that their respective image types
         #are recieved from the camera (useful for creating keograms for example)
         self._pipelined_processing_pool = processQueueBase(workers=1)
         
         #create networkManager object to handle copying outputs to the webserver
-        #TODO
         self._network_manager = networkManager.networkManager(settings_manager)        
 
     ##############################################################################################  

@@ -1,7 +1,10 @@
 from __future__ import with_statement
-from PASKIL import allskyImage, allskyImagePlugins
+
 import cPickle
 import Image
+
+from PASKIL import allskyImage, allskyImagePlugins
+
 
 class Pysces_DSLR_LYR_JPG:
 

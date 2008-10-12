@@ -1,22 +1,22 @@
-from threading import Event,Thread,currentThread
+import time
 import traceback
-import processing
-from processing.managers import SyncManager,CreatorMethod
+import multiprocessing
+
 from Queue import Queue
+from threading import Event, Thread, currentThread
 
 
 class remoteTask:
-    def __init__(self,id,method,*args,**kwargs):
-        self.id = id
+    def __init__(self, id_, method, *args, **kwargs):
+        self.id = id_
         self.method_name = method
         self.args = args
         self.kwargs = kwargs
 
-
 ##############################################################################################
 
 class threadTask:
-    def __init__(self,func,*args,**kwargs):
+    def __init__(self, func, *args, **kwargs):
         self._function = func
         self._args = args
         self._kwargs = kwargs
@@ -28,12 +28,13 @@ class threadTask:
         """
         Executes the task.
         """
-        #try to run the function. If it fails then store the exception object to pass to outside thread
+        #try to run the function. If it fails then store the exception object 
+        #to pass to outside thread
         try:
-            self._return_value = self._function(*self._args,**self._kwargs)
+            self._return_value = self._function(*self._args, **self._kwargs)
         
-        except Exception,self._exception:
-            print "\nException in thread: ",currentThread()
+        except Exception, self._exception:
+            print "\nException in thread: ", currentThread()
             traceback.print_exc()
 
     
@@ -42,11 +43,12 @@ class threadTask:
         
     def result(self):
         """
-        Blocks until the task is executed and then returns the result. If the target function has no return value 
-        then None is returned when the task is completed.
+        Blocks until the task is executed and then returns the result. If the
+        target function has no return value then None is returned when the 
+        task is completed.
         """
         self._completed.wait()
-        if self._exception == None:
+        if self._exception is None:
             return self._return_value
         else:
             traceback.print_exc()
@@ -58,7 +60,7 @@ class taskQueueBase:
     """
     Base class for classes running in a separate thread and using a task queue for input
     """
-    def __init__(self,workers=1):
+    def __init__(self, workers=1):
         self._task_queue = Queue()
         self._workers = []
         self._stay_alive = True
@@ -77,10 +79,10 @@ class taskQueueBase:
             #tell the queue that execution is complete
             self._task_queue.task_done()
     
-    def createTask(self,func,*args,**kwargs):
-        return threadTask(func,*args,**kwargs)
+    def createTask(self, func, *args, **kwargs):
+        return threadTask(func, *args, **kwargs)
     
-    def commitTask(self,task):
+    def commitTask(self, task):
         #only queue task if should be alive - tasks submitted after exit is encountered will be ignored
         if self._stay_alive:
             self._task_queue.put(task)
@@ -88,7 +90,7 @@ class taskQueueBase:
     def exit(self):
         
         #submit one exit task for each thread 
-        for i in range(len(self._workers)):
+        for i in xrange(len(self._workers)):
             task = self.createTask(self._exit)
             self.commitTask(task)
         
@@ -103,20 +105,18 @@ class taskQueueBase:
         
 class processQueueBase:
 
-    def __init__(self,workers = 1):
+    def __init__(self, workers=1):
         #create a manager for creating shared objects
-        self._manager = processing.Manager()
+        self._manager = multiprocessing.Manager()
         
         #create an input queue
         self._input_queue = Queue()
         
         self._process_count = 0
         self._max_process_count = workers
-        self._active_processes = []
-        
+        self._active_processes = []        
         self._stay_alive = True
-        
-        
+               
         #create a thread to read from the input queue and start tasks in their own process
         self._input_thread = Thread(target = self._processTasks)
         self._input_thread.start()
@@ -126,33 +126,34 @@ class processQueueBase:
             task = self._input_queue.get()
             
             #if task is None, then it means we should exit - go back to beginning of loop
-            if task == None:
+            if task is None:
                 continue    
             
             #otherwise wait for active process count to fall below max count
             while self._process_count >= self._max_process_count:
                 i = 0
                 while i < len(self._active_processes):
-                    if not self._active_processes[i].isAlive():
+                    if not self._active_processes[i].is_alive():
                         self._active_processes.pop(i)
+                        self._input_queue.task_done()
                         i = i - 1
                         self._process_count = self._process_count - 1
                     i = i + 1
+                time.sleep(0.001)
             
             #create a new process to run the task
-            p = processing.Process(target = task.execute)
+            p = multiprocessing.Process(target = task.execute)
             self._active_processes.append(p)
             self._process_count = self._process_count +1
             p.start()
-
-    
-    def createTask(self,func,*args,**kwargs):
+  
+    def createTask(self, func, *args, **kwargs):
         n = self._manager.Namespace()
         e = self._manager.Event()
-        task = processTask(n,e,func,*args,**kwargs)
+        task = processTask(n, e, func, *args, **kwargs)
         return task
     
-    def commitTask(self,task):
+    def commitTask(self, task):
         self._input_queue.put(task)
     
     def exit(self):
@@ -170,7 +171,7 @@ class processQueueBase:
 ##############################################################################################               
                
 class processTask:
-    def __init__(self,shared_namespace,shared_event,func,*args,**kwargs):
+    def __init__(self, shared_namespace, shared_event, func, *args, **kwargs):
         
         self._function = func
         self._args = args
@@ -179,15 +180,15 @@ class processTask:
         self.namespace.exception = None
         self.completed = shared_event
         
-    def execute(self,*args):
+    def execute(self):
         """
         Executes the task.
         """
         #try to run the function. If it fails then store the exception object to pass to outside thread
         try:
-            self.namespace.return_value = self._function(*self._args,**self._kwargs)
+            self.namespace.return_value = self._function(*self._args, **self._kwargs)
         
-        except Exception,self.namespace.exception:
+        except Exception, self.namespace.exception:
             pass
         
         self.completed.set()
@@ -198,7 +199,7 @@ class processTask:
         then None is returned when the task is completed.
         """
         self.completed.wait()
-        if self.namespace.exception == None:
+        if self.namespace.exception is None:
             return self.namespace.return_value
         else:
             raise self.namespace.exception

@@ -1,11 +1,15 @@
+import os
+import datetime
+import threading
+import traceback
+
 import PASKIL_jpg_plugin
 from outputs import TYPES
-import os,datetime,threading,traceback
 from PASKIL import allskyImage
 
 ##############################################################################################  
 
-def createOutputTasks(capture_mode,image_files,folder_on_host,settings_manager):
+def createOutputTasks(capture_mode, image_files, folder_on_host, settings_manager):
     """
     Returns a list of outputTask objects, one for each image type. 
     """
@@ -26,9 +30,9 @@ def createOutputTasks(capture_mode,image_files,folder_on_host,settings_manager):
     
         if len(output_types) == 1 and output_types[0] == "raw":
             #no preprocessing required, just copying images
-            output_tasks.append(outputTaskBase(outputs,image_files[image_type],folder_on_host,settings_manager))
+            output_tasks.append(outputTaskBase(outputs, image_files[image_type], folder_on_host, settings_manager))
         else:
-            output_tasks.append(outputTaskLoad(outputs,image_files[image_type],folder_on_host,settings_manager))
+            output_tasks.append(outputTaskLoad(outputs, image_files[image_type], folder_on_host, settings_manager))
                                 
     return output_tasks  
 
@@ -59,13 +63,13 @@ def _processSubTask(sub_task, settings_manager_proxy, network_manager_proxy):
         
         #copy the output to the server if required
         if sub_task.file_on_server != None:
-            network_manager_proxy.copyToServer(sub_task.output_filename,sub_task.file_on_server)
+            network_manager_proxy.copyToServer(sub_task.output_filename, sub_task.file_on_server)
                
         #shutdown the proxies
         settings_manager_proxy.exit()
         network_manager_proxy.exit()
         
-    except Exception,ex:
+    except Exception, ex:
         traceback.print_exc()
         raise ex
         
@@ -81,11 +85,11 @@ class subTask:
         
     ##############################################################################################          
     
-    def execute(self,settings_manager_proxy):
+    def execute(self, settings_manager_proxy):
         """
         Runs the function defined in the outputs.py file for this output type
         """
-        return self.function(self.image,self.output,settings_manager_proxy)
+        return self.function(self.image, self.output, settings_manager_proxy)
     
     ##############################################################################################      
 ##############################################################################################  
@@ -207,7 +211,7 @@ class outputTaskBase:
                 sub_task_result.result()
             
             #if the sub_task did not complete successfully, then don't delete the temp files
-            except Exception,ex:
+            except Exception, ex:
                 self._settings_manager.set({'output':"outputTask> Error! Processing pool failed to execute one or more sub-tasks"})
                 self._settings_manager.set({'output':"outputTask> Leaving temporary files in place"})
                 
@@ -227,11 +231,11 @@ class outputTaskLoad(outputTaskBase):
     """
     ##############################################################################################  
         
-    def preProcess(self,manager):
+    def preProcess(self, manager):
         """
         Load the image data as a shared object, accessible by all processes.
         """
-        outputTaskBase.preProcess(self,manager)
+        outputTaskBase.preProcess(self, manager)
         self.shared_image.load()
 
     ##############################################################################################           

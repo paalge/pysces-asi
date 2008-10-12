@@ -10,12 +10,12 @@ class settingsFileParser:
     def __init__(self,filename):
         self.filename = filename
         
-    ##############################################################################################
+    ###########################################################################
                 
     def getSettings(self):
         """
-        Reads the settings file and returns a dictionary containing the name,value pairs contained 
-        in the file.
+        Reads the settings file and returns a dictionary containing the name,
+        value pairs contained in the file.
         """
         settings = {"capture modes":{},"image types":{},"output types":{}}
         schedule_found = False
@@ -47,7 +47,8 @@ class settingsFileParser:
                     #append variables to settings
                     for key,value in variables.items():
                         if settings.has_key(key):
-                            raise ValueError, "Redeclaration of "+str(key)+" on line "+str(i)
+                            raise ValueError("Redeclaration of "+str(key)+
+                                             " on line "+str(i))
                         settings[key] = value
                            
                 elif line.lstrip().startswith("<capture mode>"):
@@ -56,7 +57,7 @@ class settingsFileParser:
                     try:
                         capture_mode_name = capture_mode["name"]
                     except KeyError:
-                        raise ValueError, "No name specified for capture mode on line "+str(i)
+                        raise ValueError("No name specified for capture mode on line "+str(i))
                     
                     settings["capture modes"][capture_mode_name] = capture_mode
                     
