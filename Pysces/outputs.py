@@ -61,6 +61,7 @@ def centeredImage(image,output,settings_manager):
 ##############################################################################################
 
 def realtimeKeogram(image,output,settings_manager):
+    
     #see if a realtime keogram has been created yet
     try:
         filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']
@@ -76,14 +77,14 @@ def realtimeKeogram(image,output,settings_manager):
         time_span = datetime.timedelta(hours = output.time_range)
         start_time = end_time - time_span
              
-        keo = allskyKeo.new([image],output.angle,start_time,end_time,output.strip_width,output.data_spacing)      
+        keo = allskyKeo.new([image],output.angle,start_time,end_time,strip_width=output.strip_width,data_spacing=output.data_spacing)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
         
         settings_manager.create('user_rt_keo_name', os.path.expanduser('~')+"/realtime_keogram", persistant=True)
         
     else:
         keo = allskyKeo.load(filename)
-        keo.roll([image])
+        keo = keo.roll([image])
         keo.save(filename)
 
     return allskyKeo.plotKeograms([keo])

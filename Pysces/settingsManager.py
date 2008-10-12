@@ -1,15 +1,35 @@
 """
 The settingsManager module provides the settingsManager class for managing all the settings (global
-variables) for Pysces. 
+variables) for Pysces. It also provides a proxy for this class, allowing the globals to be shared
+between multiple processes. Both the settingsManager and the settingsManagerProxy are thread safe
+allowing multiple threads to access global variables safely - at least if you are careful! See the
+documentation for the operate() method for an example of what not to do!
 """
 import os
-import persist,settingsFileParser
-from multitask import taskQueueBase,remoteTask
+
 from processing import Manager
 from threading import Thread
 
+import persist, settingsFileParser
+from multitask import taskQueueBase, remoteTask
+
+
 class settingsManagerProxy(taskQueueBase):
-    def __init__(self,id,input_queue,output_queue):
+    """
+    Proxy class for the settingsManager class. Proxy objects can be passed to child processes
+    where (once started) they can be used in the same way as their master class. Method calls 
+    made on the proxy are executed by the master. Proxies are a way to share a single object 
+    between multiple processes. The proxy is thread safe and so can be accessed by multiple 
+    threads within the child process without problems.
+    
+    Note that you cannot create a proxy for a proxy. Only the master class has a createProxy()
+    method. If the child process needs to spawn a child process of its own, then multiple
+    proxies must be created in the parent process and passed on to the child's child process.
+    
+    The settingsManagerProxy does not yet provide register() or operate() methods. This is due
+    to the fact that you can't pickle function objects defined in a child process.
+    """
+    def __init__(self, id, input_queue, output_queue):
         self.id = id
         self.input_queue = input_queue
         self.output_queue = output_queue
@@ -18,6 +38,10 @@ class settingsManagerProxy(taskQueueBase):
     ##############################################################################################
     
     def start(self):
+        """
+        Starts the proxy running. This must be called from within the process where the proxy is 
+        going to be used.
+        """
         taskQueueBase.__init__(self)
         self.started = True
         
@@ -28,7 +52,7 @@ class settingsManagerProxy(taskQueueBase):
         Note that the exit method only kills the proxy, not the master. However, it does
         remove the proxy from the master, closing the shared queue between them.
         """
-        task = remoteTask(self.id,"destroy proxy",self.id)
+        task = remoteTask(self.id, "destroy proxy", self.id)
         
         self.output_queue.put(task)
         
@@ -36,10 +60,13 @@ class settingsManagerProxy(taskQueueBase):
         
     ##############################################################################################
         
-    def get(self,name):
+    def get(self, name):
+        """
+        See settingsManager.get()
+        """
         assert self.started
         #create task
-        task = self.createTask(self.__get,name)
+        task = self.createTask(self.__get, name)
     
         #submit task
         self.commitTask(task)
@@ -49,11 +76,14 @@ class settingsManagerProxy(taskQueueBase):
 
     ##############################################################################################
     
-    def create(self,name,value,persistant=False):
+    def create(self, name, value, persistant=False):
+        """
+        See settingsManager.create()
+        """
         assert self.started
         
         #create task
-        task = self.createTask(self.__create,name,value,persistant=persistant)
+        task = self.createTask(self.__create, name, value, persistant=persistant)
     
         #submit task
         self.commitTask(task)
@@ -63,14 +93,16 @@ class settingsManagerProxy(taskQueueBase):
              
     ############################################################################################## 
     
-    def set(self,variables):
-        
+    def set(self, variables):
+        """
+        See settingsManager.set()
+        """  
         #check that variables is a list or tuple
         if type(variables) != type(dict()):
-            raise TypeError,"Expecting dictionary containing name:value pairs"
+            raise TypeError, "Expecting dictionary containing name:value pairs"
         
         #create task
-        task = self.createTask(self.__set,variables)
+        task = self.createTask(self.__set, variables)
         
         #submit task
         self.commitTask(task)
@@ -80,41 +112,41 @@ class settingsManagerProxy(taskQueueBase):
     
     ##############################################################################################    
                 
-    def __get(self,name):
-        task = remoteTask(self.id,"get",name)
+    def __get(self, name):
+        task = remoteTask(self.id, "get", name)
         
         self.output_queue.put(task)
         
         result = self.input_queue.get()
         
-        if isinstance(result,Exception):
+        if isinstance(result, Exception):
             raise result
         
         return result
     
     ##############################################################################################    
     
-    def __set(self,variables):
-        task = remoteTask(self.id,"set",variables)
+    def __set(self, variables):
+        task = remoteTask(self.id, "set", variables)
         
         self.output_queue.put(task)
         result = self.input_queue.get()
         
-        if isinstance(result,Exception):
+        if isinstance(result, Exception):
             raise result
         
         return result
     
     ##############################################################################################        
     
-    def __create(self,name,value,persistant=False):
-        task = remoteTask(self.id,"create",name,value,persistant=persistant)
+    def __create(self, name, value, persistant=False):
+        task = remoteTask(self.id, "create", name, value, persistant=persistant)
         
         self.output_queue.put(task)
         
         result = self.input_queue.get()
         
-        if isinstance(result,Exception):
+        if isinstance(result, Exception):
             raise result
         
         return result
@@ -142,7 +174,7 @@ class settingsManager(taskQueueBase):
         taskQueueBase.__init__(self)
         
         #define method to string mappings - notice that these should be the thread safe public methods!
-        self._methods = {"get":self.get,"set":self.set,"create":self.create,"register":self.register,"unregister":self.unregister,"operate":self.operate,"destroy proxy":self._commitDestroyProxy}
+        self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commitDestroyProxy}
         
         self._manager = Manager()
         self._remote_input_queue = self._manager.Queue()
@@ -163,25 +195,25 @@ class settingsManager(taskQueueBase):
             
             #create an output variable - this is used instead of printing to stdout, making it easier
             #for a top layer application (e.g. a GUI) to access this data
-            self.__create("output","")      
+            self.__create("output", "")      
             
             #load settings file
             settings = self.__settings_file_parser.getSettings()
                  
             #store settings in variables
             for key in settings.keys():
-                self.__create(key,settings[key])
+                self.__create(key, settings[key])
                         
             #create persistant storage class
-            self.__persistant_storage = persist.persistantStorage(home+"/.Pysces",self)
+            self.__persistant_storage = persist.persistantStorage(home+"/.Pysces", self)
             
             #load persistant values into variables
             persistant_data = self.__persistant_storage.getPersistantData()
             
             for key in persistant_data.keys():
-                self.__create(key,persistant_data[key],persistant=True)
+                self.__create(key, persistant_data[key], persistant=True)
         
-        except Exception,ex:
+        except Exception, ex:
             #if an exception occurs then we need to shut down the threads and manager before exiting
             taskQueueBase.exit(self)
             self._remote_input_queue.put(None)
@@ -196,7 +228,7 @@ class settingsManager(taskQueueBase):
     ##############################################################################################
     ##############################################################################################
     
-    def create(self,name,value,persistant=False):
+    def create(self, name, value, persistant=False):
         """
         Creates a new global variable called name and initialises it to value. 
         
@@ -218,7 +250,7 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = self.createTask(self.__create,name,value,persistant=persistant)
+        task = self.createTask(self.__create, name, value, persistant=persistant)
         
          #submit task
         self.commitTask(task)
@@ -261,7 +293,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################    
     
-    def get(self,names):
+    def get(self, names):
         """
         Returns a dictionary of name:value pairs for all the names in the names list. Attempting
         to get a name which doesn't exist will result in a KeyError.
@@ -285,7 +317,7 @@ class settingsManager(taskQueueBase):
         """
                 
         #create task
-        task = self.createTask(self.__get,names)
+        task = self.createTask(self.__get, names)
         
         #submit task
         self.commitTask(task)
@@ -295,7 +327,7 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################      
     
-    def operate(self,name,func,*args,**kwargs):
+    def operate(self, name, func, *args, **kwargs):
         """
         The operate() method provides a way to apply functions to global variables in a thread-safe
         way. For example if we want to increment a value, we might do:
@@ -338,7 +370,7 @@ class settingsManager(taskQueueBase):
         """
           
         #create task
-        task = self.createTask(self.__operate,name,func,*args,**kwargs)
+        task = self.createTask(self.__operate, name, func, *args, **kwargs)
         
         #submit task
         self.commitTask(task)
@@ -348,7 +380,7 @@ class settingsManager(taskQueueBase):
             
     ##############################################################################################     
      
-    def register(self,name,callback, variables):
+    def register(self, name, callback, variables):
         """
         Registers a callback function to a variable and returns a callback id. The callback function will
         be run each time the variable is set. The name argument should be the name of the variable that the
@@ -383,7 +415,7 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = self.createTask(self.__register,name,callback,variables)
+        task = self.createTask(self.__register, name, callback, variables)
         
         #submit task
         self.commitTask(task)
@@ -393,7 +425,7 @@ class settingsManager(taskQueueBase):
              
     ############################################################################################## 
     
-    def set(self,variables):
+    def set(self, variables):
         """
         Sets the values of a group of global variables. The variables argument should be a dict
         of name:value pairs to be set.
@@ -414,10 +446,10 @@ class settingsManager(taskQueueBase):
         
         #check that variables is a list or tuple
         if type(variables) != type(dict()):
-            raise TypeError,"Expecting dictionary containing name:value pairs"
+            raise TypeError, "Expecting dictionary containing name:value pairs"
         
         #create task
-        task = self.createTask(self.__set,variables)
+        task = self.createTask(self.__set, variables)
         
         #submit task
         self.commitTask(task)
@@ -427,12 +459,12 @@ class settingsManager(taskQueueBase):
     
     ############################################################################################## 
     
-    def unregister(self,id):
+    def unregister(self, id):
         """
         Unregisters the callback specified by the id argument - see register()
         """
         #create task
-        task = self.createTask(self.__unregister,id)
+        task = self.createTask(self.__unregister, id)
         
          #submit task
         self.commitTask(task)
@@ -480,13 +512,13 @@ class settingsManager(taskQueueBase):
         
         self._output_queues[id] = proxy_input_queue
         
-        return settingsManagerProxy(id,proxy_input_queue,self._remote_input_queue)
+        return settingsManagerProxy(id, proxy_input_queue, self._remote_input_queue)
         
-##############################################################################################         
+    ##############################################################################################         
     
-    def _commitDestroyProxy(self,id):
+    def _commitDestroyProxy(self, id):
         #create task
-        task = self.createTask(self._destroyProxy,id)
+        task = self.createTask(self._destroyProxy, id)
         
          #submit task
         self.commitTask(task)
@@ -494,15 +526,15 @@ class settingsManager(taskQueueBase):
         #return result when task has been completed
         return task.result()
         
-##############################################################################################         
+    ##############################################################################################         
     
-    def _destroyProxy(self,id):
+    def _destroyProxy(self, id):
         """
         Removes the queue shared with the specified proxy.
         """
         self._output_queues.pop(id)
         
-##############################################################################################             
+    ##############################################################################################             
         
     def _processRemoteTasks(self):
         """
@@ -519,12 +551,12 @@ class settingsManager(taskQueueBase):
                 continue
             
             try:
-                result = self._methods[remote_task.method_name](*remote_task.args,**remote_task.kwargs)
+                result = self._methods[remote_task.method_name](*remote_task.args, **remote_task.kwargs)
                 if remote_task.method_name != "destroy proxy":
                     #if the proxy has been destroyed then this queue won't exist any more!
                     self._output_queues[remote_task.id].put(result)
             
-            except Exception,ex:
+            except Exception, ex:
             
                 if remote_task.method_name != "destroy proxy":
                     #if the proxy has been destroyed then this queue won't exist any more!
@@ -532,10 +564,10 @@ class settingsManager(taskQueueBase):
             
     ##############################################################################################                
     
-    def __create(self,name,value,persistant=False):
+    def __create(self, name, value, persistant=False):
 
         if self.__variables.has_key(name):
-            raise ValueError,"A variable called "+name+" already exists."
+            raise ValueError, "A variable called "+name+" already exists."
         
         self.__variables[name] = value
         self.__callbacks[name] = []
@@ -545,7 +577,7 @@ class settingsManager(taskQueueBase):
           
     ##############################################################################################
 
-    def __get(self,names):
+    def __get(self, names):
                
         #build a dictionary of the variables
         variables = {}
@@ -561,17 +593,17 @@ class settingsManager(taskQueueBase):
     
     ##############################################################################################           
     
-    def __operate(self,name,func,*args,**kwargs):
+    def __operate(self, name, func, *args, **kwargs):
         
         variable = self.__get([name])
         
-        new_value = func(variable[name],*args,**kwargs)
+        new_value = func(variable[name], *args, **kwargs)
         
         self.__set({name:new_value})
     
     ##############################################################################################
     
-    def __register(self,name, callback, variables):
+    def __register(self, name, callback, variables):
 
         #check that 'name' actually exists
         if not self.__variables.has_key(name):
@@ -584,7 +616,7 @@ class settingsManager(taskQueueBase):
             new_callback_id = 0
         
         #callback_ids dict maps callabck ids to callback functions
-        self.__callback_ids[new_callback_id] = (callback,variables)
+        self.__callback_ids[new_callback_id] = (callback, variables)
         
         #callbacks dict maps names to a list of ids 
         self.__callbacks[name].append(new_callback_id)
@@ -593,13 +625,13 @@ class settingsManager(taskQueueBase):
         
     ##############################################################################################                      
            
-    def __set(self,group):
+    def __set(self, group):
         
         #check there are no duplicate entries in the group
         keys = group.keys()
         for key in keys:
             if keys.count(key) > 1:
-                raise ValueError,"Group cannot contain duplicate entries"
+                raise ValueError, "Group cannot contain duplicate entries"
 
         #set all the values and build a list of unique callbacks (the uniqueness criteria is based on the
         #function object)
@@ -609,14 +641,14 @@ class settingsManager(taskQueueBase):
             self.__variables[key] = group[key]
              
             for id in self.__callbacks[key]:
-                function,arguments = self.__callback_ids[id]
+                function, arguments = self.__callback_ids[id]
                 if function != None:
                     if unique_callback_functions.count(function) == 0:
-                        unique_callbacks.append((function,arguments))
+                        unique_callbacks.append((function, arguments))
                         unique_callback_functions.append(function)
         
         #run unique callbacks
-        for function,arguments in unique_callbacks:
+        for function, arguments in unique_callbacks:
             #get globals variables for callback
             arg_values = self.__get(arguments)
             if len(arg_values) == 0:
@@ -626,7 +658,7 @@ class settingsManager(taskQueueBase):
             
     ##############################################################################################     
     
-    def __unregister(self,id):
+    def __unregister(self, id):
 
         for list_of_ids in self.__callbacks.values():
             if list_of_ids.count(id) != 0:
