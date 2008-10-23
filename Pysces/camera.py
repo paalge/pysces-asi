@@ -208,22 +208,18 @@ class GphotoCameraManager(CameraManagerBase):
         
         #run gphoto function in separate process and record any output
         p = Popen("gphoto2 --auto-detect", shell=True, stdout=PIPE, stderr=PIPE)
-        out = " "
-        outerr = " "
-        out.join(p.stdout.readlines())
-        outerr.join(p.stderr.readlines())
         
-        #wait for process to finish
+        #wait for process to finish and read the output from the pipes
         p.wait()
+        out = p.stdout.readlines()
+        outerr = p.stderr.read()
 
         if p.returncode != 0:
             raise GphotoError, "GPhoto2 Error: failed to auto detect\n"+outerr
  
         #split output into lines and see how many lines there were in the list
         #to determine if the camera was present or not.
-        lines = out.split("\n")
-        
-        if len(lines) <=3:
+        if len(out) < 3:
             return False
         else:
             return True
@@ -266,14 +262,12 @@ class GphotoCameraManager(CameraManagerBase):
         #get list of files on camera before capture
         #run gphoto function in separate process and wait for it to finish
         p = Popen("gphoto2 -L ", shell=True, stdout=PIPE)
-        pre_image_out = " "
-        pre_image_out.join(p.stdout.readlines())
         p.wait()
         if p.returncode != 0:
             raise GphotoError, "Gphoto2 Error: Unable to list of files on camera card"
         
-        #split the list of files on the camera into lines
-        pre_image_list = pre_image_out.split("\n")
+        #read the lines of output from the gphoto command
+        pre_image_list = p.stdout.readlines()
         
         #take the picture!
         time_of_capture = datetime.datetime.utcnow()
@@ -292,20 +286,17 @@ class GphotoCameraManager(CameraManagerBase):
             
             #get list of files on camera
             p = Popen("gphoto2 -L ", shell=True, stdout=PIPE)
-            post_image_out = " "
-            post_image_out.join(p.stdout.readlines())
             p.wait()
             if p.returncode != 0:
                 raise GphotoError, "Gphoto2 Error: Unable to list of files on camera card"
             
+            post_image_list = p.stdout.readlines()
             #compare the new list of files to the one recorded before taking a picture
             #and work out how many new files have appeared and what folder they have
             #appeared in    
-            if post_image_out == pre_image_out:
+            if post_image_list == pre_image_list:
                 continue
-            else:
-                post_image_list = post_image_out.split("\n")
-                
+            else:              
                 #remove entries which existed before the image
                 for line in pre_image_list:
                     try:
@@ -376,14 +367,12 @@ class GphotoCameraManager(CameraManagerBase):
         #get list of possible configs for camera
         #run gphoto function in separate process
         p = Popen("gphoto2 --list-config", shell=True, stdout=PIPE)       
-        out = " "
-        out.join(p.stdout.readlines())
         p.wait()
         if p.returncode != 0:
             raise GphotoError, "Gphoto2 Error: Unable to download the list of configs"
             
-        #split output into lines
-        lines = out.split("\n")
+        #read output lines from pipe
+        lines = p.stdout.readlines()
         
         #get the current and possible values for all the different configs
         for config in lines:
@@ -423,14 +412,12 @@ class GphotoCameraManager(CameraManagerBase):
         
         #run gphoto function in separate process
         p = Popen("gphoto2 --get-config "+name, shell=True, stdout=PIPE, stderr=PIPE)
-        out = " "
-        out.join(p.stdout.readlines()) 
         p.wait()
         if p.returncode != 0:
             raise GphotoError, "GPhoto2 Error: failed to download config"+name
             
-        #split config values into lines
-        config_lines = out.split("\n")
+        #read config value lines from pipe
+        config_lines = p.stdout.readlines()
         
         #read the values of the config from the output of the gphoto function
         for line in config_lines:
