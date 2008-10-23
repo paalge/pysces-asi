@@ -1,8 +1,19 @@
+"""
+The scheduler module provides a Scheduler class which is responsible for evaluating
+the schedule defined in the settings file and selecting the capture mode that should
+be running. The module also defines some 'macro-like' functions which are used by the
+eval() function to resolve dates and times specified in the schedule in the settings
+file. 
+"""
+
+import datetime
+import time
+import math
+
 import ephem
-import datetime,time,math
-from threading import Event
-from dataStorageClasses import captureMode
-import captureManager
+
+import capture
+from data_storage_classes import CaptureMode
 
 #define the functions used in the settings file
 ##############################################################################################
@@ -28,10 +39,13 @@ def Date(date_string):
 
 ##############################################################################################
 
-class scheduler:
+class Scheduler:
     """
-    The scheduler class is responsible for selecting and then running the correct capture mode.
-    The selection is made by evaluating the tests defined in the schedule (in the settings file).
+    The scheduler class is responsible for selecting the correct capture mode. The
+    selection is made by evaluating the tests defined in the schedule (in the 
+    settings file). Each time the capture mode changes, a new CaptureMode object is
+    passed to the capture manager. If no test evaluate true (i.e. no capture mode
+    should be running) then None is passed to the capture manager.
     """
     def __init__(self,settings_manager):
 
@@ -39,17 +53,19 @@ class scheduler:
         
         self.__sun = None
         self.__moon = None
+        self.__observatory = None
         
         self.__running = False
         self.__current_capture_mode_name = None
+        self.__capture_manager = None
         
         #create an pyephem observer object for calculating sun and moon angles
-        self.__createObservatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
+        self.__create_observatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
         
         #register callback functions for observatory parameters
-        self.__settings_manager.register("latitude",self.__createObservatory,["latitude","longitude","altitude"])
-        self.__settings_manager.register("longitude",self.__createObservatory,["latitude","longitude","altitude"])
-        self.__settings_manager.register("altitude",self.__createObservatory,["latitude","longitude","altitude"])    
+        self.__settings_manager.register("latitude",self.__create_observatory,["latitude","longitude","altitude"])
+        self.__settings_manager.register("longitude",self.__create_observatory,["latitude","longitude","altitude"])
+        self.__settings_manager.register("altitude",self.__create_observatory,["latitude","longitude","altitude"])    
         
     ##############################################################################################        
    
@@ -61,11 +77,9 @@ class scheduler:
         if self.__running:
             raise RuntimeError,"Scheduler is already running!"
         self.__running = True
-        
-        
-        self.__capture_manager = captureManager.captureManager(self.__settings_manager)
-
-        
+                
+        self.__capture_manager = capture.CaptureManager(self.__settings_manager)
+       
         #create sun and moon objects
         self.__sun = ephem.Sun()
         self.__moon = ephem.Moon()
@@ -76,32 +90,28 @@ class scheduler:
         while self.__running:
             
             #find out which capture mode should be running now
-            capture_mode_to_run_name = self.__evaluateSchedule()
-            
-            
+            capture_mode_to_run_name = self.__evaluate_schedule()
+                        
             if capture_mode_to_run_name != self.__current_capture_mode_name:
-                #the capture mode has changed and should be updated
-                
-                
-                
+                #the capture mode has changed and should be updated               
                 if capture_mode_to_run_name == None:
                     #no capture mode should be running - pass this information to the captureManager
-                    self.__capture_manager.commitTask(None)
+                    self.__capture_manager.commit_task(None)
                     
+                    #print status messages
                     self.__settings_manager.set({"output":"scheduler> Set capture mode to None"})
                     self.__settings_manager.set({"output":"scheduler> Waiting....."})
                     self.__current_capture_mode_name = capture_mode_to_run_name
                     
                 else:
-                
                     #build a captureMode object from the data stored in the settings manager 
                     #note that the captureMode constructor takes care of building outputTypes,
                     #and the outputTypes constructor takes care of building imageTypes
                     glob_vars = self.__settings_manager.get(["capture modes","image types","output types"])
-                    capture_mode_to_run = captureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
+                    capture_mode_to_run = CaptureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
 
                     #pass capture mode to captureManager
-                    self.__capture_manager.commitTask(capture_mode_to_run)
+                    self.__capture_manager.commit_task(capture_mode_to_run)
                     self.__settings_manager.set({"output":"scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})
                 
                     self.__current_capture_mode_name = capture_mode_to_run_name
@@ -113,7 +123,7 @@ class scheduler:
       
     def exit(self):
         """
-        Terminates the captureManager and returns
+        Terminates the CaptureManager and returns
         """
         self.__running = False
         try:
@@ -123,7 +133,7 @@ class scheduler:
 
     ##############################################################################################    
     
-    def __createObservatory(self,glob_vars):
+    def __create_observatory(self,glob_vars):
         """
         Creates a pyephem observer object based on the observatory data provided in the settings 
         file.
@@ -139,7 +149,7 @@ class scheduler:
         
     ############################################################################################## 
     
-    def __evaluateSchedule(self):
+    def __evaluate_schedule(self):
         """
         Evaluates the schedule and returns the name of the capture mode that should be currently
         being run. If no capture mode should be run then it returns None.
@@ -147,15 +157,15 @@ class scheduler:
         
         #set date and time to the time now (in UT)
         now = datetime.datetime.utcnow()
-        DATE = now.date()
-        TIME = now.time()       
+        DATE = now.date() #used in eval() call below
+        TIME = now.time() #used in eval() call below      
         
         #compute sun and moon parameters
         self.__observatory.date = now.strftime("%Y/%m/%d %H:%M:%S")
         self.__sun.compute(self.__observatory)
         self.__moon.compute(self.__observatory)
         
-        #set sun and moon angles
+        #set sun and moon angles - these are used in the eval() call below
         SUN_ANGLE = math.degrees(self.__sun.alt)
         MOON_ANGLE = math.degrees(self.__moon.alt)
         MOON_PHASE = float(self.__moon.moon_phase * 100.0)

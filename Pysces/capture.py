@@ -1,54 +1,61 @@
+"""
+The capture module provides a single class, the CaptureManager. This recieves
+CaptureMode objects from the Scheduler class, sets the camera configs, and 
+then takes images continuously until it recieves a different CaptureMode. It 
+creates OutputTasks for each image captured, and passes these to the 
+OutputTaskHandler for processing.
+
+The CaptureManager also creates a HostManager object and uses this to update the
+folder structure on the host before each image is captured.
+"""
 import traceback
 import Queue
 import datetime
 
-from multitask import taskQueueBase, threadTask
-from dataStorageClasses import captureMode
-import hostManager, D80, outputTaskHandler
-from outputTask import createOutputTasks
+import host
+import output_task_handler
 
+#to use a different camera manager class, change this line to import
+#your camera manager as CameraManager.
+from D80 import D80CameraManager as CameraManager
 
+from multitask import ThreadQueueBase, ThreadTask
+from data_storage_classes import CaptureMode
+from output_task import create_output_tasks
+from camera import GphotoError
 
-class captureManager(taskQueueBase):
-    
+##############################################################################################  
+
+class CaptureManager(ThreadQueueBase):
+    """
+    The CaptureManager class is sub-classed from ThreadQueueBase, allowing
+    it to run in its own thread. The _process_tasks() method is overwritten
+    to allow it to accept CaptureMode objects in addition to task objects.
+    """
     def __init__(self, settings_manager):
-        taskQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self)
         
         try:
             self._settings_manager = settings_manager
-            self._host_manager = hostManager.hostManager(settings_manager)
-            self._camera_manager = D80.D80CameraManager(settings_manager)
-            self._output_task_handler = outputTaskHandler.outputTaskHandler(settings_manager)
+            self._host_manager = host.HostManager(settings_manager)
+            self._camera_manager = CameraManager(settings_manager)
+            self._output_task_handler = output_task_handler.OutputTaskHandler(settings_manager)
 
         except Exception, ex:
             traceback.print_exc()
             self.exit()
             raise ex
+
+    ##############################################################################################  
             
-    def _processTasks(self):
+    def _process_tasks(self):
         """
-        Here we overwrite the _processTasks method, so that the captureManager can deal with a queue of 
-        capture mode objects rather than task objects. This is a bit messy, since the object put into the
-        queue could be a task object or a captureMode object, and each has to be dealt with separately.
+        Here we overwrite the _process_tasks method, so that the CaptureManager can deal with a queue of 
+        CaptureMode objects rather than ThreadTask objects. This is a bit messy, since the object put into the
+        queue could be a task object or a CaptureMode object, and each has to be dealt with separately.
         
         The captureManager MUST still support receiving task objects, since the exit() method relies on
         this.
-        
-        >>> #doc tests to ensure that the class still supports task objects
-        >>> from settingsManager import settingsManager
-        >>> s = settingsManager()
-        >>> from multitask import threadTask
-        >>> def output(s):
-        ...    return s
-        >>> t = threadTask(output,"Must still support tasks!")
-        >>> c = captureManager(s)
-        >>> c.commitTask(t)
-        >>> print t.result()
-        Must still support tasks!
-        >>> c.commitTask(None) #also has to support being passed None
-        >>> c.exit()
-        >>> s.exit()
-        
         """
         #pull the first capture mode out of the queue
         capture_mode = self._task_queue.get()   
@@ -58,42 +65,42 @@ class captureManager(taskQueueBase):
             #the object from the queue could be a task object, so we should try executing it first
             #before we assume that it is a capture mode - this is a bit of a hack, but is needed to 
             #make sure that the exit() method works correctly
-            if isinstance(capture_mode, threadTask):
+            if isinstance(capture_mode, ThreadTask):
                 capture_mode.execute()
                 self._task_queue.task_done()
             elif capture_mode == None:
                 #nothing to do - wait for a real capture mode to come through the queue
                 self._task_queue.task_done()
-            elif isinstance(capture_mode, captureMode):
+            elif isinstance(capture_mode, CaptureMode):
                 #The somewhat unstable nature of gphoto makes this loop prone to failure
                 #if the gphoto call fails then we just skip this image and carry on with
                 # the next one
                 
                 try:
                     #set the camera settings to those required by the capture mode
-                    self._camera_manager.setCaptureMode(capture_mode)
+                    self._camera_manager.set_capture_mode(capture_mode)
                     
                     #record the time before we try to take an image
                     start_time = datetime.datetime.utcnow()
                     
                     #update the folders on the host
-                    self._host_manager.updateFolders(capture_mode)
+                    self._host_manager.update_folders(capture_mode)
                     
                     #get the current folder on the host
                     folder_on_host = self._settings_manager.get(["output folder"])["output folder"]
                     
                     #capture images and produce output tasks
-                    images = self._camera_manager.captureImages()
+                    images = self._camera_manager.capture_images()
                 
-                except RuntimeError: #RuntimeError is rasied when gphoto fails in the cameraManager
-                    self._settings_manager.set("output", "captureManager> Error! Failed to capture/download image.")
+                except GphotoError: #RuntimeError is rasied when gphoto fails in the cameraManager
+                    self._settings_manager.set({"output": "captureManager> Error! Failed to capture/download image."})
                     images = None
                 
                 if images != None:
                     #create an outputTask obejct for each image type and pass them to the ouputTaskHandler
-                    output_tasks = createOutputTasks(capture_mode, images, folder_on_host, self._settings_manager)
+                    output_tasks = create_output_tasks(capture_mode, images, folder_on_host, self._settings_manager)
                     for output_task in output_tasks:
-                        self._output_task_handler.commitTask(output_task)
+                        self._output_task_handler.commit_task(output_task)
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
@@ -127,6 +134,10 @@ class captureManager(taskQueueBase):
     ##############################################################################################  
     
     def exit(self):
+        """
+        Shuts down all the objects that this class created, and then kills its own
+        internal worker thread.
+        """
         try:
             self._output_task_handler.exit()
         except AttributeError:
@@ -142,7 +153,7 @@ class captureManager(taskQueueBase):
             pass    
         
         #kill own worker thread
-        taskQueueBase.exit(self)
+        ThreadQueueBase.exit(self)
         
     ##############################################################################################
 ##############################################################################################             

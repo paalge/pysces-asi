@@ -2,17 +2,20 @@
 The settings file parser module provides a settingsFileParser class for reading
 and writing to the settings file.
 """
-from __future__ import with_statement
 import os
 
-class settingsFileParser:
-    
+class SettingsFileParser:
+    """
+    This is a helper class for the SettingsManager, providing methods for reading
+    and writing to the settings file. This allows the settings file format to be
+    changed without having to modify the SettingsManager.
+    """
     def __init__(self,filename):
         self.filename = filename
         
     ###########################################################################
                 
-    def getSettings(self):
+    def get_settings(self):
         """
         Reads the settings file and returns a dictionary containing the name,
         value pairs contained in the file.
@@ -42,7 +45,7 @@ class settingsFileParser:
                 
                 elif line.lstrip().startswith("<variables>"):
                     #read variable definitions
-                    variables,i = self.__readVariables(fp,i)
+                    variables,i = self.__read_variables(fp,i)
                     
                     #append variables to settings
                     for key,value in variables.items():
@@ -53,7 +56,7 @@ class settingsFileParser:
                            
                 elif line.lstrip().startswith("<capture mode>"):
                     #capture mode definition
-                    capture_mode,i = self.__readVariables(fp,i)
+                    capture_mode,i = self.__read_variables(fp,i)
                     try:
                         capture_mode_name = capture_mode["name"]
                     except KeyError:
@@ -65,20 +68,20 @@ class settingsFileParser:
                     if schedule_found:
                         raise ValueError, "Second schedule definition on line "+str(i) 
                     #schedule definition
-                    schedule,i = self.__readVariables(fp,i)
+                    schedule,i = self.__read_variables(fp,i)
                     
                     settings["schedule"] = schedule
                     schedule_found = True
                 
                 elif line.lstrip().startswith("<image>"):
                     #image type definition
-                    image,i = self.__readVariables(fp,i)
+                    image,i = self.__read_variables(fp,i)
                     
                     settings["image types"][image["image_type"]] = image
                     
                 elif line.lstrip().startswith("<output>"):
                     #output type definition
-                    output,i = self.__readVariables(fp,i)
+                    output,i = self.__read_variables(fp,i)
                     
                     settings["output types"][output["name"]] = output
                 
@@ -89,7 +92,7 @@ class settingsFileParser:
     
     ############################################################################################## 
      
-    def __readVariables(self,fp,line_no):
+    def __read_variables(self,fp,line_no):
         """
         Returns a tuple (settings,line_no). Where settings is a dictionary of name:value pairs for the 
         variables within a declaration block and line_no is the line number of the end of the declaration 
@@ -154,7 +157,7 @@ class settingsFileParser:
     
     ##############################################################################################
     
-    def updateSettingsFile(self,settings):    
+    def update_settings_file(self,settings):    
         """
         Method writes a new settings file with the settings values stored in memory (within the 
         settingsManager class). The new file can then be copied across to the old file thus preventing
@@ -188,7 +191,7 @@ class settingsFileParser:
                     
                     elif line.lstrip().startswith("<variables>"):
                         ofp.write(line)
-                        i=self.__updateVariables(fp,ofp,i,settings)
+                        i=self.__update_variables(fp,ofp,i,settings)
                         
                     elif line.lstrip().startswith("<capture mode>"):
                         ofp.write(line)
@@ -196,17 +199,17 @@ class settingsFileParser:
                         dec_start = fp.tell()
                         
                         #read declaration to see which capture mode this is, j is not used (unwanted line number)
-                        capture_mode,j = self.__readVariables(fp,i)
+                        capture_mode,j = self.__read_variables(fp,i)
                         
                         #go back to start of declaration
                         fp.seek(dec_start)
                         
                         #update file
-                        self.__updateVariables(fp,ofp,i,settings["capture modes"][capture_mode["name"]])
+                        self.__update_variables(fp,ofp,i,settings["capture modes"][capture_mode["name"]])
                         
                     elif line.lstrip().startswith("<schedule>"):
                         ofp.write(line)
-                        self.__updateVariables(fp,ofp,i,settings["schedule"])
+                        self.__update_variables(fp,ofp,i,settings["schedule"])
                     
                     elif line.lstrip().startswith("<output>"):
                         ofp.write(line)
@@ -214,13 +217,13 @@ class settingsFileParser:
                         dec_start = fp.tell()
                         
                         #read declaration to see which output this is, j is not used (unwanted line number)
-                        output,j = self.__readVariables(fp, i)
+                        output,j = self.__read_variables(fp, i)
                         
                         #go back to start of declaration
                         fp.seek(dec_start)
                         
                         #update file
-                        self.__updateVariables(fp, ofp, i, settings["output types"][output["name"]])
+                        self.__update_variables(fp, ofp, i, settings["output types"][output["name"]])
                     
                     elif line.lstrip().startswith("<image>"):
                         ofp.write(line)
@@ -228,13 +231,13 @@ class settingsFileParser:
                         dec_start = fp.tell()
                         
                         #read declaration to see which image this is, j is not used (unwanted line number)
-                        image,j = self.__readVariables(fp,i)
+                        image,j = self.__read_variables(fp,i)
                         
                         #go back to start of declaration
                         fp.seek(dec_start)
                         
                         #update file converting the imageType object back to a dict
-                        self.__updateVariables(fp,ofp,i,settings["image types"][image["image_type"]])
+                        self.__update_variables(fp,ofp,i,settings["image types"][image["image_type"]])
                         
                     else:
                         raise ValueError,"Unable to update settings file. Error on line "+str(i)    
@@ -244,7 +247,7 @@ class settingsFileParser:
                    
     ##############################################################################################
   
-    def __updateVariables(self,fp,ofp,line_no,settings):
+    def __update_variables(self,fp,ofp,line_no,settings):
         """
         Method updates a single declaration block in the settings file with the settings values stored 
         in memory (within the settingsManager class). The fp and ofp 

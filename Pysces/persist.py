@@ -1,10 +1,13 @@
-from __future__ import with_statement
-
+"""
+The persist module provides a PersistantStorage class, which is used by the SettingsManager
+class to store variables that are not in the settings file. Their values are loaded
+again when the program is started.
+"""
 import cPickle
 
 ##############################################################################################
 
-class persistantStorage():
+class PersistantStorage():
     """
     The persistantStorage class allows for persistant storage of variables not in the settings file.
     This is useful for storing data such as realtime keogram filenames etc.
@@ -32,7 +35,7 @@ class persistantStorage():
                
     ##############################################################################################
         
-    def getPersistantData(self):
+    def get_persistant_data(self):
         """
         Returns a dict of name:value pairs containing the current values of the variables in 
         persistant storage.
@@ -56,8 +59,6 @@ class persistantStorage():
         """
         Store the persistant values in a file and return.
         """
-        
-        
         #get up to date values of persistant variables from the settings manager
         updated_data = self.__settings_manager.get(self.__data.keys())
 

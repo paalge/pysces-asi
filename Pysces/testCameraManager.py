@@ -3,11 +3,11 @@ from __future__ import with_statement
 import time
 import cPickle
 
-from cameraManager import cameraManagerBase
+from cameraManager import CameraManagerBase
 
-class D80Simulator(cameraManagerBase):
+class D80Simulator(CameraManagerBase):
        
-    def _setCaptureMode(self,capture_mode):
+    def _set_capture_mode(self,capture_mode):
         print "Camera is being set to "+capture_mode.name
         #set camera configs based on capture mode settings
         for name,value in capture_mode.camera_settings.items():
@@ -18,7 +18,7 @@ class D80Simulator(cameraManagerBase):
    
     ############################################################################################## 
     
-    def _captureImages(self):
+    def _capture_images(self):
         print "capturing images"
         time.sleep(10)
         if self.camera_configs["imgquality"].current == "JPEG Normal":
@@ -38,12 +38,12 @@ class D80Simulator(cameraManagerBase):
      
     ############################################################################################## 
 
-    def _isConnected(self):
+    def _is_connected(self):
         time.sleep(1)
         return True
      
     ##############################################################################################
-    def _downloadConfigs(self):
+    def _download_configs(self):
         time.sleep(10)
         with open("Pysces/test_camera_configs","rb") as fp:
             configs = cPickle.load(fp)

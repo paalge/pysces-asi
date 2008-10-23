@@ -1,22 +1,39 @@
-from __future__ import with_statement
+"""
+The D80 module provides a single camera manager class for controlling a Nikon
+D80 camera.
+"""
 import cPickle
-from cameraManager import gphotoCameraManager
 
+import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
+from camera import GphotoCameraManager
 
-class D80CameraManager(gphotoCameraManager):
+##############################################################################################  
+
+class D80CameraManager(GphotoCameraManager):
+    """
+    Class for controlling a Nikon D80 camera. 
+    """
     def __init__(self, settings_manager):
-        gphotoCameraManager.__init__(self, settings_manager)
+        GphotoCameraManager.__init__(self, settings_manager)
         
         #ensure that the camera is set to capture to the card, rather than the RAM
         if self.camera_configs['capturetarget'].current != "Memory card":
-            self._setConfig('capturetarget', 'Memory card')
+            self._set_config('capturetarget', 'Memory card')
+
+    ##############################################################################################      
     
-    
-    def _setCaptureMode(self,capture_mode):
+    def _set_capture_mode(self, capture_mode):
+        """
+        Sets the camera configs to those specified in the CaptureMode object
+        passed as the argument. Note that the _set_config() method (which is
+        inherited from the GphotoCameraManager class) takes care of updating
+        the camera_configs attribute (which is inherited from the 
+        CameraManagerBase class).
+        """
         #set camera configs based on capture mode settings
-        for name,value in capture_mode.camera_settings.items():
+        for name, value in capture_mode.camera_settings.items():
             if self.camera_configs[name].current != value:
-                self._setConfig(name, value)
+                self._set_config(name, value)
 
         #work out what the imgquality config should be set to based on the image types in the outputs
         files=[]
@@ -34,23 +51,24 @@ class D80CameraManager(gphotoCameraManager):
         
         if get_jpeg and get_raw:
             if self.camera_configs["imgquality"].current != "NEF+Normal":
-                self._setConfig("imgquality", "NEF+Normal")
+                self._set_config("imgquality", "NEF+Normal")
         elif get_raw:
             if self.camera_configs["imgquality"].current != "NEF (Raw)":
-                self._setConfig("imgquality", "NEF (Raw)")
+                self._set_config("imgquality", "NEF (Raw)")
         else:
             if self.camera_configs["imgquality"].current != "JPEG Normal":
-                self._setConfig("imgquality", "JPEG Normal")
+                self._set_config("imgquality", "JPEG Normal")
         
         self.capture_mode = capture_mode
         
     ##############################################################################################         
     
-    def _captureImages(self):
+    def _capture_images(self):
         """
-        
+        Captures the images and creates the site info files needed to open them with 
+        PASKIL.
         """
-        glob_vars = self._settings_manager.get(['tmp dir','filename_format','camera_rotation','fov_angle','lens_projection','latitude','longitude','magnetic_bearing'])
+        glob_vars = self._settings_manager.get(['tmp dir', 'filename_format', 'camera_rotation', 'fov_angle', 'lens_projection', 'latitude', 'longitude', 'magnetic_bearing'])
 
         get_raw = False
         get_jpeg = False
@@ -67,52 +85,56 @@ class D80CameraManager(gphotoCameraManager):
             number_of_images += 1 
                 
         #capture the image and find which folder the camera puts it in    
-        active_folder,time_of_capture = self._takePhoto(number_of_images)
+        active_folder, time_of_capture = self._take_photo(number_of_images)
         
         if active_folder == None:
             #the folder wasn't empty to start with so we need to empty it first
             return None
         
         #otherwise copy the images from the camera into the current tmp dir
-        self._copyPhotos(active_folder,time_of_capture)       
+        self._copy_photos(active_folder, time_of_capture)       
         
         #delete images from camera card
-        self._deletePhotos(active_folder)
+        self._delete_photos(active_folder)
         
         new_images = {}
         
         #create PASKIL allskyImage objects from the image files - rather than write a text based site info file,
         #we create the info dictionary here and then pickle it. The PASKIL plugin can then read the pickled dict
         if get_raw:
-            info = self._buildPASKILInfo("NEF", time_of_capture, glob_vars)
+            info = self._build_PASKIL_info("NEF", time_of_capture, glob_vars)
             
             info_filename = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+"_NEF.info"
             image_filename = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".NEF"
             
             #open file to pickle info dict into 
-            with open(info_filename,"wb") as fp:
-                cPickle.dump(info,fp)
+            with open(info_filename, "wb") as fp:
+                cPickle.dump(info, fp)
 
-            new_images["NEF"] = (image_filename,info_filename)
+            new_images["NEF"] = (image_filename, info_filename)
         
         if get_jpeg:
-            info = self._buildPASKILInfo("jpeg", time_of_capture, glob_vars)
+            info = self._build_PASKIL_info("jpeg", time_of_capture, glob_vars)
             
             info_filename = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+"_JPG.info"
             image_filename = glob_vars['tmp dir'] +"/"+time_of_capture.strftime(glob_vars['filename_format'])+".JPG"
             
             #open file to pickle info dict into 
-            with open(info_filename,"wb") as fp:
-                cPickle.dump(info,fp)
+            with open(info_filename, "wb") as fp:
+                cPickle.dump(info, fp)
 
-            new_images["jpeg"] = (image_filename,info_filename)
+            new_images["jpeg"] = (image_filename, info_filename)
             
         return new_images
     
     ##############################################################################################         
     
-    def _buildPASKILInfo(self,image_type,capture_time,glob_vars):
-        info = {'camera':{},'header':{},'processing':{}}
+    def _build_PASKIL_info(self, image_type, capture_time, glob_vars):
+        """
+        Creates a dict containing all the information required by PASKIL, in the 
+        correct format. See docs for PASKIL.allskyImagePlugins.
+        """
+        info = {'camera':{}, 'header':{}, 'processing':{}}
         #search through outputs to find the image object corresponding to this type of image
         image = None
         
@@ -141,8 +163,8 @@ class D80CameraManager(gphotoCameraManager):
             
         #TODO
         #add metadata about the software used etc.
-        
-        
+                
         return info
-           
+    
+    ##############################################################################################             
 ############################################################################################## 

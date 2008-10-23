@@ -10,11 +10,12 @@ import os
 from multiprocessing import Manager
 from threading import Thread
 
-import persist, settingsFileParser
-from multitask import taskQueueBase, remoteTask
+import persist 
+import settings_file_parser
+from multitask import ThreadQueueBase, RemoteTask
 
 
-class settingsManagerProxy(taskQueueBase):
+class _SettingsManagerProxy(ThreadQueueBase):
     """
     Proxy class for the settingsManager class. Proxy objects can be passed to child processes
     where (once started) they can be used in the same way as their master class. Method calls 
@@ -29,8 +30,8 @@ class settingsManagerProxy(taskQueueBase):
     The settingsManagerProxy does not yet provide register() or operate() methods. This is due
     to the fact that you can't pickle function objects defined in a child process.
     """
-    def __init__(self, id, input_queue, output_queue):
-        self.id = id
+    def __init__(self, id_, input_queue, output_queue):
+        self.id = id_
         self.input_queue = input_queue
         self.output_queue = output_queue
         self.started = False
@@ -42,7 +43,7 @@ class settingsManagerProxy(taskQueueBase):
         Starts the proxy running. This must be called from within the process where the proxy is 
         going to be used.
         """
-        taskQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self)
         self.started = True
         
     ##############################################################################################    
@@ -52,11 +53,11 @@ class settingsManagerProxy(taskQueueBase):
         Note that the exit method only kills the proxy, not the master. However, it does
         remove the proxy from the master, closing the shared queue between them.
         """
-        task = remoteTask(self.id, "destroy proxy", self.id)
+        task = RemoteTask(self.id, "destroy proxy", self.id)
         
         self.output_queue.put(task)
         
-        taskQueueBase.exit(self)
+        ThreadQueueBase.exit(self)
         
     ##############################################################################################
         
@@ -66,10 +67,10 @@ class settingsManagerProxy(taskQueueBase):
         """
         assert self.started
         #create task
-        task = self.createTask(self.__get, name)
+        task = self.create_task(self.__get, name)
     
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
     
         #return result when task has been completed
         return task.result()
@@ -83,10 +84,10 @@ class settingsManagerProxy(taskQueueBase):
         assert self.started
         
         #create task
-        task = self.createTask(self.__create, name, value, persistant=persistant)
+        task = self.create_task(self.__create, name, value, persistant=persistant)
     
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
     
         #return result when task has been completed
         return task.result()
@@ -102,10 +103,10 @@ class settingsManagerProxy(taskQueueBase):
             raise TypeError, "Expecting dictionary containing name:value pairs"
         
         #create task
-        task = self.createTask(self.__set, variables)
+        task = self.create_task(self.__set, variables)
         
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
@@ -113,7 +114,7 @@ class settingsManagerProxy(taskQueueBase):
     ##############################################################################################    
                 
     def __get(self, name):
-        task = remoteTask(self.id, "get", name)
+        task = RemoteTask(self.id, "get", name)
         
         self.output_queue.put(task)
         
@@ -127,7 +128,7 @@ class settingsManagerProxy(taskQueueBase):
     ##############################################################################################    
     
     def __set(self, variables):
-        task = remoteTask(self.id, "set", variables)
+        task = RemoteTask(self.id, "set", variables)
         
         self.output_queue.put(task)
         result = self.input_queue.get()
@@ -140,7 +141,7 @@ class settingsManagerProxy(taskQueueBase):
     ##############################################################################################        
     
     def __create(self, name, value, persistant=False):
-        task = remoteTask(self.id, "create", name, value, persistant=persistant)
+        task = RemoteTask(self.id, "create", name, value, persistant=persistant)
         
         self.output_queue.put(task)
         
@@ -154,7 +155,7 @@ class settingsManagerProxy(taskQueueBase):
     ##############################################################################################        
 ##############################################################################################            
            
-class settingsManager(taskQueueBase):
+class SettingsManager(ThreadQueueBase):
     """
     The settingsManager class is in charge of all global variables used in Pysces. It allows 
     thread-safe access and modification to the global variables by pipelining requests from
@@ -171,15 +172,15 @@ class settingsManager(taskQueueBase):
     """
     def __init__(self):
         
-        taskQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self)
         
         #define method to string mappings - notice that these should be the thread safe public methods!
-        self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commitDestroyProxy}
+        self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commit_destroy_proxy}
         
         self._manager = Manager()
         self._remote_input_queue = self._manager.Queue()
         #create thread to handle remote tasks
-        self.remote_task_thread = Thread(target = self._processRemoteTasks)
+        self.remote_task_thread = Thread(target = self._process_remote_tasks)
         self.remote_task_thread.start()
         
         try:
@@ -191,31 +192,31 @@ class settingsManager(taskQueueBase):
             
             #hard code settings file location and create a parser
             home = os.path.expanduser("~")
-            self.__settings_file_parser = settingsFileParser.settingsFileParser(home+"/.Pysces/settings.txt")
+            self.__settings_file_parser = settings_file_parser.SettingsFileParser(home+"/.Pysces/settings.txt")
             
             #create an output variable - this is used instead of printing to stdout, making it easier
             #for a top layer application (e.g. a GUI) to access this data
             self.__create("output", "")      
             
             #load settings file
-            settings = self.__settings_file_parser.getSettings()
+            settings = self.__settings_file_parser.get_settings()
                  
             #store settings in variables
             for key in settings.keys():
                 self.__create(key, settings[key])
                         
             #create persistant storage class
-            self.__persistant_storage = persist.persistantStorage(home+"/.Pysces", self)
+            self.__persistant_storage = persist.PersistantStorage(home+"/.Pysces", self)
             
             #load persistant values into variables
-            persistant_data = self.__persistant_storage.getPersistantData()
+            persistant_data = self.__persistant_storage.get_persistant_data()
             
             for key in persistant_data.keys():
                 self.__create(key, persistant_data[key], persistant=True)
         
         except Exception, ex:
             #if an exception occurs then we need to shut down the threads and manager before exiting
-            taskQueueBase.exit(self)
+            ThreadQueueBase.exit(self)
             self._remote_input_queue.put(None)
             self.remote_task_thread.join()
             self._manager.shutdown()
@@ -250,10 +251,10 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = self.createTask(self.__create, name, value, persistant=persistant)
+        task = self.create_task(self.__create, name, value, persistant=persistant)
         
          #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
@@ -284,9 +285,9 @@ class settingsManager(taskQueueBase):
         
             #update the settings file
             self.set({"output": "settingsManager> Updating settings file"})
-            self.__settings_file_parser.updateSettingsFile(self.__variables)
+            self.__settings_file_parser.update_settings_file(self.__variables)
         finally:
-            taskQueueBase.exit(self)
+            ThreadQueueBase.exit(self)
             self._remote_input_queue.put(None)
             self.remote_task_thread.join()
             self._manager.shutdown()
@@ -317,10 +318,10 @@ class settingsManager(taskQueueBase):
         """
                 
         #create task
-        task = self.createTask(self.__get, names)
+        task = self.create_task(self.__get, names)
         
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
@@ -370,10 +371,10 @@ class settingsManager(taskQueueBase):
         """
           
         #create task
-        task = self.createTask(self.__operate, name, func, *args, **kwargs)
+        task = self.create_task(self.__operate, name, func, *args, **kwargs)
         
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
@@ -415,10 +416,10 @@ class settingsManager(taskQueueBase):
         """
         
         #create task
-        task = self.createTask(self.__register, name, callback, variables)
+        task = self.create_task(self.__register, name, callback, variables)
         
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()   
@@ -449,32 +450,32 @@ class settingsManager(taskQueueBase):
             raise TypeError, "Expecting dictionary containing name:value pairs"
         
         #create task
-        task = self.createTask(self.__set, variables)
+        task = self.create_task(self.__set, variables)
         
         #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
     
     ############################################################################################## 
     
-    def unregister(self, id):
+    def unregister(self, id_):
         """
         Unregisters the callback specified by the id argument - see register()
         """
         #create task
-        task = self.createTask(self.__unregister, id)
+        task = self.create_task(self.__unregister, id_)
         
          #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
     
     ##############################################################################################     
     
-    def createProxy(self):
+    def create_proxy(self):
         """
         Returns a proxy object for the settingsManager. This can be passed to other processes
         allowing them to access and modify the global variables, i.e. it allows the global
@@ -484,10 +485,10 @@ class settingsManager(taskQueueBase):
         proxy to generate a proxy to pass to it.
         """
         #create task
-        task = self.createTask(self._createProxy)
+        task = self.create_task(self._create_proxy)
         
          #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()   
@@ -499,44 +500,44 @@ class settingsManager(taskQueueBase):
     ##############################################################################################
     ##############################################################################################
     
-    def _createProxy(self):
+    def _create_proxy(self):
         #create a unique ID for the proxy
         current_ids = self._output_queues.keys()
         
         if len(current_ids) > 0:
-            id = max(current_ids) + 1
+            id_ = max(current_ids) + 1
         else:
-            id = 0
+            id_ = 0
         
         proxy_input_queue = self._manager.Queue()
         
-        self._output_queues[id] = proxy_input_queue
+        self._output_queues[id_] = proxy_input_queue
         
-        return settingsManagerProxy(id, proxy_input_queue, self._remote_input_queue)
+        return _SettingsManagerProxy(id_, proxy_input_queue, self._remote_input_queue)
         
     ##############################################################################################         
     
-    def _commitDestroyProxy(self, id):
+    def _commit_destroy_proxy(self, id_):
         #create task
-        task = self.createTask(self._destroyProxy, id)
+        task = self.create_task(self._destroy_proxy, id_)
         
          #submit task
-        self.commitTask(task)
+        self.commit_task(task)
         
         #return result when task has been completed
         return task.result()
         
     ##############################################################################################         
     
-    def _destroyProxy(self, id):
+    def _destroy_proxy(self, id_):
         """
         Removes the queue shared with the specified proxy.
         """
-        self._output_queues.pop(id)
+        self._output_queues.pop(id_)
         
     ##############################################################################################             
         
-    def _processRemoteTasks(self):
+    def _process_remote_tasks(self):
         """
         This method is run in a separate thread. It pulls remote task objects out of the shared
         queue object (shared between the master=this class, and all the proxys) and commits the
@@ -640,8 +641,8 @@ class settingsManager(taskQueueBase):
         for key in keys:
             self.__variables[key] = group[key]
              
-            for id in self.__callbacks[key]:
-                function, arguments = self.__callback_ids[id]
+            for id_ in self.__callbacks[key]:
+                function, arguments = self.__callback_ids[id_]
                 if function != None:
                     if unique_callback_functions.count(function) == 0:
                         unique_callbacks.append((function, arguments))
@@ -658,13 +659,13 @@ class settingsManager(taskQueueBase):
             
     ##############################################################################################     
     
-    def __unregister(self, id):
+    def __unregister(self, id_):
 
         for list_of_ids in self.__callbacks.values():
-            if list_of_ids.count(id) != 0:
-                list_of_ids.remove(id)
+            if list_of_ids.count(id_) != 0:
+                list_of_ids.remove(id_)
         
-        self.__callback_ids.pop(id)
+        self.__callback_ids.pop(id_)
            
     ##############################################################################################     
 ##############################################################################################           

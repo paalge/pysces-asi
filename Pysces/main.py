@@ -2,31 +2,31 @@ import threading
 import multiprocessing
 
 import settingsManager,scheduler
-from multitask import taskQueueBase,threadTask
+from multitask import ThreadQueueBase,ThreadTask
 
 
-class mainBox(taskQueueBase):
+class mainBox(ThreadQueueBase):
     
     def __init__(self):
         self.__running = False
         
         #create settings manger object)
-        self.__settings_manager = settingsManager.settingsManager()
+        self.__settings_manager = settingsManager.SettingsManager()
         
         #create scheduler object
-        self.__scheduler = scheduler.scheduler(self.__settings_manager)
+        self.__scheduler = scheduler.Scheduler(self.__settings_manager)
         
         self.__capture_task = None
         
         #start mainBox worker thread
-        taskQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self)
         
     ##############################################################################################  
          
     def start(self):
         if self.__capture_task == None:
             #create task
-            self.__capture_task = threadTask(self.__scheduler.start)
+            self.__capture_task = ThreadTask(self.__scheduler.start)
             
             #note that this task will not complete until the scheduler has exited so mainBox will not
             #pull any more tasks out of the queue until exit() is called by an external thread.
@@ -36,10 +36,10 @@ class mainBox(taskQueueBase):
             #all executed by the calling thread (except for start()).
             
             #commit task
-            self.commitTask(self.__capture_task)
+            self.commit_task(self.__capture_task)
             
-            t = threadTask(self.__capture_task.result)
-            self.commitTask(t)
+            t = ThreadTask(self.__capture_task.result)
+            self.commit_task(t)
             return t
             
         else:
@@ -84,7 +84,7 @@ class mainBox(taskQueueBase):
             self.__settings_manager.exit()
         finally:
             #kill the mainBox worker thread
-            taskQueueBase.exit(self)
+            ThreadQueueBase.exit(self)
         raise KeyboardInterrupt
         
     ##############################################################################################         

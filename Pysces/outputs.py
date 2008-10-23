@@ -1,6 +1,6 @@
 """
-This module defines all the functions used to create outputs by Pysces. It is provides a layer
-of abstraction between the developer and the inner workings of Pysces, allowing them to easily
+This module defines all the functions used to create outputs by Pysces. It provides a layer
+of abstraction between the user and the inner workings of Pysces, allowing them to easily
 define new outputs without having to worry about the complexities of object orientation.
 
 To create a new output type you must add a function to this file and then include it in the 
@@ -10,7 +10,7 @@ the settings file.
 All functions should accept an allskyImage object, an outputType object and a settingsManager
 object as their only three arguments.
 
-All output functions should return an object which has a save(filename) method, in which case
+All output functions should return an object which has a save(filename) or a savefig(filename) method, in which case
 Pysces will take care of saving the output on the filesystem and copying it to the webserver.
 These operations are based on the information given in the output declaration in the settings file.
 If there is no output to be saved (for example if the output is a direct copy of the image), then
@@ -26,10 +26,10 @@ from PASKIL import allskyKeo
 
 ##############################################################################################
 
-def copyImage(image,output,settings_manager):
+def copy_image(image, output, settings_manager):
     source_path = image.getFilename()
     source_filename = os.path.basename(source_path)
-    file_,extension = os.path.splitext(source_filename)
+    file_, extension = os.path.splitext(source_filename)
     
     day_folder = settings_manager.get(["output folder"])["output folder"]
     
@@ -37,30 +37,30 @@ def copyImage(image,output,settings_manager):
     
     #copy the image
     settings_manager.set({"output":"outputTaskHandler> Copying "+source_path+" to "+dest_path})
-    shutil.copyfile(source_path,dest_path)
+    shutil.copyfile(source_path, dest_path)
     
     return None
 
 ##############################################################################################
 
-def createQuicklook(image,output,settings_manager):   
+def create_quicklook(image, output, settings_manager):   
     im = image.binaryMask(output.fov_angle)
     im = im.centerImage()
-    im = im.alignNorth(north="geomagnetic")
+    im = im.alignNorth(north="geomagnetic", orientation='NWSE')
     ql = im.createQuicklook()
     return ql
 
 ##############################################################################################
 
-def centeredImage(image,output,settings_manager):
+def centered_image(image, output, settings_manager):
     im = image.binaryMask(output.fov_angle)
     im = im.centerImage()
-    im = im.alignNorth(north="geomagnetic")
+    im = im.alignNorth(north="geomagnetic", orientation='NWSE')
     return im 
 
 ##############################################################################################
 
-def realtimeKeogram(image,output,settings_manager):
+def realtime_keogram(image, output, settings_manager):
     
     #see if a realtime keogram has been created yet
     try:
@@ -77,7 +77,7 @@ def realtimeKeogram(image,output,settings_manager):
         time_span = datetime.timedelta(hours = output.time_range)
         start_time = end_time - time_span
              
-        keo = allskyKeo.new([image],output.angle,start_time,end_time,strip_width=output.strip_width,data_spacing=output.data_spacing)      
+        keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width, data_spacing=output.data_spacing)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
         
         settings_manager.create('user_rt_keo_name', os.path.expanduser('~')+"/realtime_keogram", persistant=True)
@@ -92,4 +92,7 @@ def realtimeKeogram(image,output,settings_manager):
 ##############################################################################################    
  
 #dict to map output types to output functions.
-TYPES = {"raw":copyImage,"quicklook":createQuicklook,"paskil_png":centeredImage, "realtimeKeo":realtimeKeogram}
+TYPES = {"raw":copy_image, 
+         "quicklook":create_quicklook, 
+         "paskil_png":centered_image, 
+         "realtimeKeo":realtime_keogram}

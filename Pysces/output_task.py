@@ -3,15 +3,19 @@ import datetime
 import threading
 import traceback
 
-import PASKIL_jpg_plugin
 from outputs import TYPES
 from PASKIL import allskyImage
 
 ##############################################################################################  
 
-def createOutputTasks(capture_mode, image_files, folder_on_host, settings_manager):
+def create_output_tasks(capture_mode, image_files, folder_on_host, settings_manager):
     """
-    Returns a list of outputTask objects, one for each image type. 
+    Returns a list of OutputTask objects, one for each image type. The capture_mode 
+    argument should be a CaptureMode object, image_files should be a dict of 
+    {type,(image file, info file)} as returned by the CameraManager.capture_images()
+    method, folder_on_host should be a string containing the folder on the host machine
+    where the outputs should be stored and settings_manager should be an instance of
+    the SettingsManager class.
     """
     output_tasks = []
     
@@ -30,15 +34,15 @@ def createOutputTasks(capture_mode, image_files, folder_on_host, settings_manage
     
         if len(output_types) == 1 and output_types[0] == "raw":
             #no preprocessing required, just copying images
-            output_tasks.append(outputTaskBase(outputs, image_files[image_type], folder_on_host, settings_manager))
+            output_tasks.append(OutputTaskBase(outputs, image_files[image_type], folder_on_host, settings_manager))
         else:
-            output_tasks.append(outputTaskLoad(outputs, image_files[image_type], folder_on_host, settings_manager))
+            output_tasks.append(OutputTaskLoad(outputs, image_files[image_type], folder_on_host, settings_manager))
                                 
     return output_tasks  
 
 ##############################################################################################  
 
-def _processSubTask(sub_task, settings_manager_proxy, network_manager_proxy):
+def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
     """
     This is the function that is run by the worker process in the pool. It starts the 
     proxies (this has to be done in the process where the proxies are going to be 
@@ -75,7 +79,13 @@ def _processSubTask(sub_task, settings_manager_proxy, network_manager_proxy):
         
 ##############################################################################################          
         
-class subTask:
+class SubTask:
+    """
+    The subTask class is used to represent a single output that must be created for a particular
+    image type. It holds information on what function to run to create the output and also where
+    the output should be saved when it has been created. The execute method runs the function
+    to create the output, but does not save it.
+    """
     def __init__(self, function, image, output_type, output_filename):
         self.function = function
         self.output_filename = output_filename
@@ -94,60 +104,54 @@ class subTask:
     ##############################################################################################      
 ##############################################################################################  
            
-class outputTaskBase:
+class OutputTaskBase:
     """
-    Base class for outputTask classes. outputTasks objects are passed to the outputTaskHandler
+    Base class for OutputTask classes. outputTasks objects are passed to the OutputTaskHandler
     which uses them to produce a list of tasks that need to be completed regarding output
-    from the current capture mode. The outputTask object is then used to create a shared 
-    image object which can be accessed by all the tasks when they are run in separate 
-    processes. This avoids both having to load the image from file more than once and also
-    having to pass large amounts of image data between processes.
+    from the current capture mode.
+    
+    OutputTaskBase objects (and objects inheriting from OutputTaskBase) represent a set of 
+    outputs that must be produced for a single image file. When the output task is completed
+    then the temporary image files can be removed.
     """
     def __init__(self, outputs, image_file, folder_on_host, settings_manager):
         self._image_file = image_file[0]
         self._image_info_file = image_file[1]
         self._outputs = outputs
-        self.shared_image = None
+        self.image = None
         self._folder_on_host = folder_on_host
         self._settings_manager = settings_manager
         self._removal_thread = None
-         
         self._running_subtasks = []
             
     ##############################################################################################  
         
-    def isCompleted(self):
+    def is_completed(self):
         """
         Returns false unless all the subtasks have been completed.
         """
         return (not self._removal_thread.isAlive())
-        
-        for sub_task_result in self._running_subtasks:
-            if not sub_task_result.ready():
-                return False
-        
-        return True
     
     ##############################################################################################     
      
-    def preProcess(self, manager):
+    def preprocess(self):
         """
         In the base class, there is no need to actually load the image data, since the only sub-tasks
         are direct copies of the files. 
         """
         #self.shared_image = manager.ASI(self._image_file, self._image_info_file)        
-        self.shared_image = allskyImage.new(self._image_file, self._image_info_file)
+        self.image = allskyImage.new(self._image_file, self._image_info_file)
         
     ##############################################################################################  
     
-    def runSubTasks(self, processing_pool, pipelined_processing_pool, network_manager, manager):
+    def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager, manager):
         """
         Runs the pre-processing functions and then submits the sub-tasks to the processing
         pools for execution.
         """
         
         #run the pre-processing
-        self.preProcess(manager)
+        self.preprocess(manager)
         
         #build the subtask objects
         for output in self._outputs:
@@ -158,7 +162,7 @@ class outputTaskBase:
             #figure out where to save this output.
         
             #get the capture time from the image header
-            capture_time_string = self.shared_image.getInfo()['header']['Creation Time']
+            capture_time_string = self.image.getInfo()['header']['Creation Time']
             
             capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
             
@@ -171,15 +175,15 @@ class outputTaskBase:
             
             
             #create the subTask object
-            sub_task = subTask(function, self.shared_image, output, path_to_save_to)
+            sub_task = SubTask(function, self.image, output, path_to_save_to)
             
             #submit the sub_task for processing
             if output.pipelined:
-                task = pipelined_processing_pool.createTask(_processSubTask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
+                task = pipelined_processing_pool.createTask(_process_subtask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
                 self._running_subtasks.append(task)
                 pipelined_processing_pool.commitTask(task)
             else:
-                task = processing_pool.createTask(_processSubTask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
+                task = processing_pool.createTask(_process_subtask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
                 self._running_subtasks.append(task)
                 processing_pool.commitTask(task)
             
@@ -225,18 +229,18 @@ class outputTaskBase:
     ##############################################################################################  
 ##############################################################################################  
 
-class outputTaskLoad(outputTaskBase):
+class OutputTaskLoad(OutputTaskBase):
     """
-    Sub-class of outputTaskBase which loads the image data into the shared allskyImage object.
+    Sub-class of OutputTaskBase which loads the image data into the allskyImage object.
     """
     ##############################################################################################  
         
-    def preProcess(self, manager):
+    def preprocess(self):
         """
-        Load the image data as a shared object, accessible by all processes.
+        Load the image data.
         """
-        outputTaskBase.preProcess(self, manager)
-        self.shared_image.load()
+        OutputTaskBase.preprocess(self)
+        self.image.load()
 
     ##############################################################################################           
 ##############################################################################################  
