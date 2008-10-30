@@ -67,7 +67,7 @@ def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
         
         #copy the output to the server if required
         if sub_task.file_on_server != None:
-            network_manager_proxy.copyToServer(sub_task.output_filename, sub_task.file_on_server)
+            network_manager_proxy.copy_to_server(sub_task.output_filename, sub_task.file_on_server)
                
         #shutdown the proxies
         settings_manager_proxy.exit()
@@ -144,14 +144,14 @@ class OutputTaskBase:
         
     ##############################################################################################  
     
-    def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager, manager):
+    def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager):
         """
         Runs the pre-processing functions and then submits the sub-tasks to the processing
         pools for execution.
         """
         
         #run the pre-processing
-        self.preprocess(manager)
+        self.preprocess()
         
         #build the subtask objects
         for output in self._outputs:
@@ -179,13 +179,13 @@ class OutputTaskBase:
             
             #submit the sub_task for processing
             if output.pipelined:
-                task = pipelined_processing_pool.createTask(_process_subtask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
+                task = pipelined_processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
-                pipelined_processing_pool.commitTask(task)
+                pipelined_processing_pool.commit_task(task)
             else:
-                task = processing_pool.createTask(_process_subtask, sub_task, self._settings_manager.createProxy(), network_manager.createProxy())
+                task = processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
-                processing_pool.commitTask(task)
+                processing_pool.commit_task(task)
             
         #start a new thread to remove the temporary image files when all sub_tasks are complete
         self._removal_thread = threading.Thread(target = self._exit)
@@ -220,8 +220,7 @@ class OutputTaskBase:
                 self._settings_manager.set({'output':"outputTask> Leaving temporary files in place"})
                 
                 raise ex
-        
-                
+                     
         #remove the temporary files associated with this outputTask
         os.remove(self._image_file)
         os.remove(self._image_info_file)                

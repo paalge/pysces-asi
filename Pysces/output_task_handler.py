@@ -33,7 +33,7 @@ class OutputTaskHandler(ThreadQueueBase):
         self._running_output_tasks = []
         
         #create a processing pool to produce the outputs asyncronously - this has as many workers as there are CPU cores
-        self._processing_pool = ProcessQueueBase(workers=multiprocessing.cpuCount())
+        self._processing_pool = ProcessQueueBase(workers=multiprocessing.cpu_count())
         
         #create a processing pool to produce outputs in the order that their respective image types
         #are recieved from the camera (useful for creating keograms for example)
@@ -66,7 +66,7 @@ class OutputTaskHandler(ThreadQueueBase):
                 self._running_output_tasks.append(output_task)
                 
                 #run all the sub tasks in separate processes
-                output_task.runSubTasks(self._processing_pool, self._pipelined_processing_pool, self._network_manager)
+                output_task.run_subtasks(self._processing_pool, self._pipelined_processing_pool, self._network_manager)
             
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
@@ -80,7 +80,7 @@ class OutputTaskHandler(ThreadQueueBase):
             #tidy up the list of tasks currently being run, remove the ones that have finished
             i = 0
             while i < len(self._running_output_tasks):
-                if self._running_output_tasks[i].isCompleted():
+                if self._running_output_tasks[i].is_completed():
                     self._running_output_tasks.pop(i)
                     i = i -1
                 i = i + 1            
