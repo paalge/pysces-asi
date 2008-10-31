@@ -2,6 +2,7 @@
 The settings file parser module provides a settingsFileParser class for reading
 and writing to the settings file.
 """
+from __future__ import with_statement
 import os
 
 class SettingsFileParser:

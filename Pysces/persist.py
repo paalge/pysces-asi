@@ -3,6 +3,7 @@ The persist module provides a PersistantStorage class, which is used by the Sett
 class to store variables that are not in the settings file. Their values are loaded
 again when the program is started.
 """
+from __future__ import with_statement
 import cPickle
 
 ##############################################################################################

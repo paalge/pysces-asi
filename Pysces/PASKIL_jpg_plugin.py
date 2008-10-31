@@ -3,7 +3,7 @@ This module defines the plugin class needed to allow PASKIL to load the D80's
 jpeg images. See the documentation for the PASKIL.allskyImagePlugins module
 for details about plugin classes.
 """
-
+from __future__ import with_statement
 import cPickle
 import Image
 

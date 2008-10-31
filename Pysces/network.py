@@ -4,7 +4,7 @@ copying files to a CIFS filesystem on a remote server. It also provides
 a proxy for the NetworkManager, which can be used to share a single network
 manager object between multiple processses.
 """
-
+from __future__ import with_statement
 import os
 import string
 import stat

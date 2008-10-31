@@ -2,6 +2,7 @@
 The D80 module provides a single camera manager class for controlling a Nikon
 D80 camera.
 """
+from __future__ import with_statement
 import cPickle
 
 import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
