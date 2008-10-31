@@ -1,7 +1,7 @@
 import threading
 import multiprocessing
 
-import settingsManager,scheduler
+import settings_manager,scheduler
 from multitask import ThreadQueueBase,ThreadTask
 
 
@@ -11,7 +11,7 @@ class mainBox(ThreadQueueBase):
         self.__running = False
         
         #create settings manger object)
-        self.__settings_manager = settingsManager.SettingsManager()
+        self.__settings_manager = settings_manager.SettingsManager()
         
         #create scheduler object
         self.__scheduler = scheduler.Scheduler(self.__settings_manager)

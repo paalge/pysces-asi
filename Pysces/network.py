@@ -173,7 +173,7 @@ class NetworkManager(ThreadQueueBase):
                 fp.write("#!/bin/sh\n")
                 fp.write("echo \"### Password required to mount web server ###\"\n")
                 fp.write("sudo mount.cifs \""+glob_vars['web_server']+"\" \""+self._mount_point+"\" -o user=\""+glob_vars['web_username'] +"\", rw,\n")
-                fp.write("sleep \"15\"")
+                fp.write("read -p \"Press any key to continue....\"")
                 
             #make mount script executable
             os.chmod(home+"/.Pysces/mount-script.sh", stat.S_IRWXU+stat.S_IRWXO+stat.S_IRWXG)
