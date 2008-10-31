@@ -258,6 +258,9 @@ class GphotoCameraManager(CameraManagerBase):
         To be able to download the correct images, the camera card needs to be blank.
         If it is not, then this method deletes all the photos on it and returns a
         (None, None) tuple.
+        
+        Note: The time of capture recorded and used to name the files is the time
+        just before the shutter is opened, i.e. before the call to gphoto2 --capture-image.
         """
         #get list of files on camera before capture
         #run gphoto function in separate process and wait for it to finish
