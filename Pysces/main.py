@@ -19,7 +19,7 @@ class mainBox(ThreadQueueBase):
         self.__capture_task = None
         
         #start mainBox worker thread
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="MainBox")
         
     ##############################################################################################  
          

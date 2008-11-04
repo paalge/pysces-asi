@@ -42,7 +42,7 @@ class _NetworkManagerProxy(ThreadQueueBase):
         Starts the proxy running. This must be called from within the process where the proxy is 
         going to be used.
         """
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="NetworkManagerProxy")
         self.started = True
         
     ##############################################################################################    
@@ -107,7 +107,7 @@ class NetworkManager(ThreadQueueBase):
         home = os.path.expanduser('~')
         self._mount_point = home+"/.Pysces/servers/web"
         
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="NetworkManager")
         
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"copyToServer":self.copy_to_server, "destroy proxy":self._commit_destroy_proxy}
@@ -213,7 +213,7 @@ class NetworkManager(ThreadQueueBase):
         folder_on_server = self.__settings_manager.get(["web_dir"])["web_dir"]
         os.chmod(source, stat.S_IRWXU+stat.S_IRWXO+stat.S_IRWXG)
         shutil.copyfile(source, os.path.normpath(self._mount_point + "/" + folder_on_server + "/" + dest))
-        self.__settings_manager.set({"output": "networkManager> Copied file to server"}) 
+        self.__settings_manager.set({"output": "networkManager> Copied \""+source+"\" to server"}) 
     
     ##############################################################################################                 
                 

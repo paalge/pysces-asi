@@ -43,7 +43,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
         Starts the proxy running. This must be called from within the process where the proxy is 
         going to be used.
         """
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="NetworkManagerProxy")
         self.started = True
         
     ##############################################################################################    
@@ -172,7 +172,7 @@ class SettingsManager(ThreadQueueBase):
     """
     def __init__(self):
         
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="NetworkManager")
         
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commit_destroy_proxy}
@@ -508,7 +508,7 @@ class SettingsManager(ThreadQueueBase):
             id_ = max(current_ids) + 1
         else:
             id_ = 0
-        
+            
         proxy_input_queue = self._manager.Queue()
         
         self._output_queues[id_] = proxy_input_queue
@@ -533,7 +533,7 @@ class SettingsManager(ThreadQueueBase):
         """
         Removes the queue shared with the specified proxy.
         """
-        self._output_queues.pop(id_)
+        queue = self._output_queues.pop(id_)
         
     ##############################################################################################             
         
@@ -562,6 +562,7 @@ class SettingsManager(ThreadQueueBase):
                 if remote_task.method_name != "destroy proxy":
                     #if the proxy has been destroyed then this queue won't exist any more!
                     self._output_queues[remote_task.id].put(ex)
+            self._remote_input_queue.task_done()
             
     ##############################################################################################                
     

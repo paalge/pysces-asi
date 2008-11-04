@@ -33,7 +33,7 @@ class CaptureManager(ThreadQueueBase):
     to allow it to accept CaptureMode objects in addition to task objects.
     """
     def __init__(self, settings_manager):
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="CaptureManager")
         
         try:
             self._settings_manager = settings_manager
@@ -130,6 +130,7 @@ class CaptureManager(ThreadQueueBase):
             
             #sit and wait for the next task or captureMode
             capture_mode = self._task_queue.get()
+            self._task_queue.task_done()
 
     ##############################################################################################  
     

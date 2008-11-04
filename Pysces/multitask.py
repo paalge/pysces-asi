@@ -10,6 +10,7 @@ and executed sequentially. Parallelisation: by setting the number of workers to
 import time
 import traceback
 import multiprocessing
+import datetime
 
 from Queue import Queue
 from threading import Event, Thread, currentThread
@@ -89,12 +90,14 @@ class ThreadQueueBase:
     Base class for classes running in separate threads and using a task queue
     for input.
     """
-    def __init__(self, workers=1, maxsize=0):
+    def __init__(self, workers=1, maxsize=0,name="Un-named"):
         self._task_queue = Queue(maxsize=maxsize)
         self._workers = []
         self._stay_alive = True
+        self.name = name
         for i in range(workers):
             self._workers.append(Thread(target = self._process_tasks))
+            self._workers[i].setName(self.name + " thread "+str(i))
             self._workers[i].start()
 
     ###########################################################################
@@ -133,8 +136,15 @@ class ThreadQueueBase:
         """
         #only queue task if should be alive - tasks submitted after exit is 
         #encountered will be ignored
+        for thread in self._workers:
+            if not thread.isAlive():
+                print "### Error! ### Worker thread in "+self.name+ " has died!"
+                raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
+        
         if self._stay_alive:
             self._task_queue.put(task)
+        
+        print str(self._task_queue.qsize)+" items in "+self.name+ " input queue at "+str(datetime.datetime.utcnow())
 
     ###########################################################################
        
@@ -169,10 +179,10 @@ class ProcessQueueBase:
     Base class for running task in separate processes and using a task queue
     for input.
     """
-    def __init__(self, workers=1, maxsize=0):
+    def __init__(self, workers=1, maxsize=0,name = "Un-named"):
         #create a manager for creating shared objects
         self._manager = multiprocessing.Manager()
-        
+        self.name = name
         #create an input queue
         self._input_queue = Queue(maxsize=maxsize)
         
@@ -184,6 +194,7 @@ class ProcessQueueBase:
         #create a thread to read from the input queue and start tasks in their 
         #own process
         self._input_thread = Thread(target = self._process_tasks)
+        self._input_thread.setName(self.name+" input thread")
         self._input_thread.start()
 
     ###########################################################################
@@ -241,6 +252,9 @@ class ProcessQueueBase:
         in its own process. The task's result() method be used for syncronising 
         with task completion.
         """
+        if not self._input_thread.isAlive():
+            print "### Error! ### Worker thread in "+self.name+ " has died!"
+            raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
         self._input_queue.put(task)
 
     ###########################################################################

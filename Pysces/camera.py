@@ -32,7 +32,7 @@ class CameraManagerBase(ThreadQueueBase):
     on the methods themselves for details of what they have to do.
     """
     def __init__(self):
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="CameraManager")
         
         try:
             #check that camera is connected

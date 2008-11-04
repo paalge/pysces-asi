@@ -6,6 +6,7 @@ degree of parallelism will scale automatically with the number of available
 CPUs.
 """
 import multiprocessing
+import datetime
 
 import network
 from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
@@ -28,7 +29,7 @@ class OutputTaskHandler(ThreadQueueBase):
     queue as well as ThreadTask objects.
     """
     def __init__(self, settings_manager):
-        ThreadQueueBase.__init__(self)
+        ThreadQueueBase.__init__(self,name="OutputTaskHandler")
         
         self._running_output_tasks = []
         
@@ -52,6 +53,8 @@ class OutputTaskHandler(ThreadQueueBase):
         class.
         """
         while self._stay_alive or (not self._task_queue.empty()):
+            print "OutputTaskHandler> "+str(self._task_queue.qsize)+" tasks in queue at "+str(datetime.datetime.utcnow())
+            
             #pull an outputTask out of the queue
             output_task = self._task_queue.get()
             
