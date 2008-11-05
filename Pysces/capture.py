@@ -11,6 +11,7 @@ folder structure on the host before each image is captured.
 import traceback
 import Queue
 import datetime
+import time
 
 import host
 import output_task_handler
@@ -99,6 +100,15 @@ class CaptureManager(ThreadQueueBase):
                 if images != None:
                     #create an outputTask obejct for each image type and pass them to the ouputTaskHandler
                     output_tasks = create_output_tasks(capture_mode, images, folder_on_host, self._settings_manager)
+                    i = 0
+                    while i < len(output_tasks):
+                        try:
+                            self._output_task_handler.commit_task(output_tasks[i])
+                            i += 1
+                        except Queue.Full:
+                            #the outputTaskHandler is busy, wait for a bit and then retry
+                            time.sleep(1)
+                    
                     for output_task in output_tasks:
                         self._output_task_handler.commit_task(output_task)
             
