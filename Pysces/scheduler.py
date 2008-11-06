@@ -74,57 +74,64 @@ class Scheduler:
         Starts the scheduler running. Basically it enters an infinte loop of checking the schedule
         to see which capture mode should be run. 
         """
-        if self.__running:
-            raise RuntimeError,"Scheduler is already running!"
-        self.__running = True
-                
-        self.__capture_manager = capture.CaptureManager(self.__settings_manager)
-       
-        #create sun and moon objects
-        self.__sun = ephem.Sun()
-        self.__moon = ephem.Moon()
-        
-        self.__settings_manager.set({"output":"scheduler> Waiting....."})
-        
-        #work out which capture mode should be running now
-        while self.__running:
+        try:
+            if self.__running:
+                raise RuntimeError,"Scheduler is already running!"
+            self.__running = True
             
-            #find out which capture mode should be running now
-            capture_mode_to_run_name = self.__evaluate_schedule()
+            try:        
+                self.__capture_manager = capture.CaptureManager(self.__settings_manager)
+            except Exception,ex:
+                raise ex
+            #create sun and moon objects
+            self.__sun = ephem.Sun()
+            self.__moon = ephem.Moon()
+            
+            self.__settings_manager.set({"output":"Scheduler> Waiting....."})
+            
+            #work out which capture mode should be running now
+            while self.__running:
+                
+                #find out which capture mode should be running now
+                capture_mode_to_run_name = self.__evaluate_schedule()
+                            
+                if capture_mode_to_run_name != self.__current_capture_mode_name:
+                    #the capture mode has changed and should be updated               
+                    if capture_mode_to_run_name == None:
+                        #no capture mode should be running - pass this information to the captureManager
+                        self.__capture_manager.commit_task(None)
                         
-            if capture_mode_to_run_name != self.__current_capture_mode_name:
-                #the capture mode has changed and should be updated               
-                if capture_mode_to_run_name == None:
-                    #no capture mode should be running - pass this information to the captureManager
-                    self.__capture_manager.commit_task(None)
+                        #print status messages
+                        self.__settings_manager.set({"output":"Scheduler> Set capture mode to None"})
+                        self.__settings_manager.set({"output":"Scheduler> Waiting....."})
+                        self.__current_capture_mode_name = capture_mode_to_run_name
+                        
+                    else:
+                        #build a captureMode object from the data stored in the settings manager 
+                        #note that the captureMode constructor takes care of building outputTypes,
+                        #and the outputTypes constructor takes care of building imageTypes
+                        glob_vars = self.__settings_manager.get(["capture modes","image types","output types"])
+                        capture_mode_to_run = CaptureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
+    
+                        #pass capture mode to captureManager
+                        self.__capture_manager.commit_task(capture_mode_to_run)
+                        self.__settings_manager.set({"output":"Scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})
                     
-                    #print status messages
-                    self.__settings_manager.set({"output":"scheduler> Set capture mode to None"})
-                    self.__settings_manager.set({"output":"scheduler> Waiting....."})
-                    self.__current_capture_mode_name = capture_mode_to_run_name
-                    
-                else:
-                    #build a captureMode object from the data stored in the settings manager 
-                    #note that the captureMode constructor takes care of building outputTypes,
-                    #and the outputTypes constructor takes care of building imageTypes
-                    glob_vars = self.__settings_manager.get(["capture modes","image types","output types"])
-                    capture_mode_to_run = CaptureMode(glob_vars["capture modes"][capture_mode_to_run_name],glob_vars["image types"],glob_vars["output types"])
-
-                    #pass capture mode to captureManager
-                    self.__capture_manager.commit_task(capture_mode_to_run)
-                    self.__settings_manager.set({"output":"scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})
+                        self.__current_capture_mode_name = capture_mode_to_run_name
                 
-                    self.__current_capture_mode_name = capture_mode_to_run_name
-            
-            #wait for a short while before re-evaluating the schedule
-            time.sleep(5)
-        
+                #wait for a short while before re-evaluating the schedule
+                time.sleep(5)
+        finally:
+            self.exit()
     ##############################################################################################          
       
     def exit(self):
         """
         Terminates the CaptureManager and returns
         """
+        if not self.__running:
+            return
+        
         self.__running = False
         try:
             self.__capture_manager.exit()

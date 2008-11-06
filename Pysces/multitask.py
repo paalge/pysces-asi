@@ -143,8 +143,6 @@ class ThreadQueueBase:
         
         if self._stay_alive:
             self._task_queue.put(task)
-        
-        print str(self._task_queue.qsize)+" items in "+self.name+ " input queue at "+str(datetime.datetime.utcnow())
 
     ###########################################################################
        

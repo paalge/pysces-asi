@@ -120,7 +120,7 @@ class CameraManagerBase(ThreadQueueBase):
         setting the camera to capture all the different image types required by the
         outputs defined for the capture mode.
         """
-        raise AttributeError, "cameraManagerBase must be sub-classed"
+        raise AttributeError, "CameraManagerBase must be sub-classed"
    
     ############################################################################################## 
     
@@ -134,7 +134,7 @@ class CameraManagerBase(ThreadQueueBase):
         is entirely up to you, provided that you write a PASKIL plugin to read it
         (see the PASKIL.allskyImagePlugins module for details).
         """
-        raise AttributeError, "cameraManagerBase must be sub-classed"
+        raise AttributeError, "CameraManagerBase must be sub-classed"
       
     ############################################################################################## 
 
@@ -142,7 +142,7 @@ class CameraManagerBase(ThreadQueueBase):
         """
         Method should return True if the camera is connected, False otherwise.
         """
-        raise AttributeError, "cameraManagerBase must be sub-classed"
+        raise AttributeError, "CameraManagerBase must be sub-classed"
      
     ##############################################################################################
     def _download_configs(self):
@@ -152,7 +152,7 @@ class CameraManagerBase(ThreadQueueBase):
         the configs, and must be identical to the names used in the settings file
         for the configs.
         """
-        raise AttributeError, "cameraManagerBase must be sub-classed"
+        raise AttributeError, "CameraManagerBase must be sub-classed"
      
     ##############################################################################################
 ##############################################################################################
@@ -166,7 +166,7 @@ class GphotoCameraManager(CameraManagerBase):
     def __init__(self, settings_manager):
         self._settings_manager = settings_manager
         
-        self._settings_manager.set({"output":"cameraManager> Downloading settings from camera - please wait"})
+        self._settings_manager.set({"output":"CameraManager> Downloading settings from camera - please wait"})
         
         CameraManagerBase.__init__(self)       
                
@@ -178,7 +178,7 @@ class GphotoCameraManager(CameraManagerBase):
         of the config. The value argument should be the descriptive value of the
         config (i.e. not the 0,1,2,3... index) and should be a string.
         """
-        self._settings_manager.set({"output":"cameraManager> Setting "+name+" to "+value})    
+        self._settings_manager.set({"output":"CameraManager> Setting "+name+" to "+value})    
         
         #convert the descriptive value to its index value using the list of 
         #camera configs
@@ -274,7 +274,7 @@ class GphotoCameraManager(CameraManagerBase):
         
         #take the picture!
         time_of_capture = datetime.datetime.utcnow()
-        self._settings_manager.set({"output": "cameraManager> Capturing image."})
+        self._settings_manager.set({"output": "CameraManager> Capturing image."})
         
         p = Popen("gphoto2 --capture-image ", shell=True)
         p.wait()
@@ -329,8 +329,8 @@ class GphotoCameraManager(CameraManagerBase):
                     #this means that the camera card probably wasn't blank to start with - which is a tricky problem!
                     #The easiest way around this is to wipe the card and accept that we will lose the photo(s)
                     #that have just been taken
-                    self._settings_manager.set({"output":"cameraManager> Error! Camera card was not blank!"})
-                    self._settings_manager.set({"output":"cameraManager> Deleting all images from camera."})
+                    self._settings_manager.set({"output":"CameraManager> Error! Camera card was not blank!"})
+                    self._settings_manager.set({"output":"CameraManager> Deleting all images from camera."})
                     self._delete_photos(active_folder)
                     return None, None
 
@@ -352,7 +352,7 @@ class GphotoCameraManager(CameraManagerBase):
         """
         glob_vars = self._settings_manager.get(['tmp dir', 'filename_format'])
         
-        self._settings_manager.set({"output": "cameraManager> Downloading image(s)"})
+        self._settings_manager.set({"output": "CameraManager> Downloading image(s)"})
         p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"", shell=True)
         p.wait()
         if p.returncode != 0:

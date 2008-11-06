@@ -19,7 +19,7 @@ from multitask import ThreadQueueBase, RemoteTask
 
 class _NetworkManagerProxy(ThreadQueueBase):
     """
-    Proxy class for the networkManager class. Proxy objects can be passed to child processes
+    Proxy class for the NetworkManager class. Proxy objects can be passed to child processes
     where (once started) they can be used in the same way as their master class. Method calls 
     made on the proxy are executed by the master. Proxies are a way to share a single object 
     between multiple processes. The proxy is thread safe and so can be accessed by multiple 
@@ -213,7 +213,7 @@ class NetworkManager(ThreadQueueBase):
         folder_on_server = self.__settings_manager.get(["web_dir"])["web_dir"]
         os.chmod(source, stat.S_IRWXU+stat.S_IRWXO+stat.S_IRWXG)
         shutil.copyfile(source, os.path.normpath(self._mount_point + "/" + folder_on_server + "/" + dest))
-        self.__settings_manager.set({"output": "networkManager> Copied \""+source+"\" to server"}) 
+        self.__settings_manager.set({"output": "NetworkManager> Copied \""+source+"\" to server"}) 
     
     ##############################################################################################                 
                 

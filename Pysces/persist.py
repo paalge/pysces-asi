@@ -16,7 +16,7 @@ class PersistantStorage():
       
     def __init__(self,folder,settings_manager):
         self.__settings_manager = settings_manager
-        self.__persistant_file = folder +"/persistant_storage"   
+        self.__persistant_file = folder +"/persistant_storage"
       
         try:
             with open(self.__persistant_file,"r") as fp:

@@ -6,7 +6,7 @@ degree of parallelism will scale automatically with the number of available
 CPUs.
 """
 import multiprocessing
-import datetime
+import Queue
 
 import network
 from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
@@ -29,7 +29,7 @@ class OutputTaskHandler(ThreadQueueBase):
     queue as well as ThreadTask objects.
     """
     def __init__(self, settings_manager):
-        ThreadQueueBase.__init__(self,name="OutputTaskHandler")
+        ThreadQueueBase.__init__(self, name="OutputTaskHandler")
         
         self._running_output_tasks = []
         
@@ -42,7 +42,9 @@ class OutputTaskHandler(ThreadQueueBase):
         
         #create NetworkManager object to handle copying outputs to the webserver
         self._network_manager = network.NetworkManager(settings_manager)        
-
+        
+        self._settings_manager = settings_manager
+        
     ##############################################################################################  
 
     def _process_tasks(self):
@@ -53,7 +55,6 @@ class OutputTaskHandler(ThreadQueueBase):
         class.
         """
         while self._stay_alive or (not self._task_queue.empty()):
-            print "OutputTaskHandler> "+str(self._task_queue.qsize)+" tasks in queue at "+str(datetime.datetime.utcnow())
             
             #pull an outputTask out of the queue
             output_task = self._task_queue.get()
@@ -65,15 +66,16 @@ class OutputTaskHandler(ThreadQueueBase):
                 self._task_queue.task_done()
                 
             elif isinstance(output_task, OutputTaskBase):
+
                 #add to the list of running tasks
                 self._running_output_tasks.append(output_task)
-                
+                    
                 #run all the sub tasks in separate processes
                 output_task.run_subtasks(self._processing_pool, self._pipelined_processing_pool, self._network_manager)
-            
+                
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
-            
+
             else:
                 #if this happens then something has gone seriously wrong!
                 raise(TypeError, str(type(output_task))+
@@ -86,8 +88,40 @@ class OutputTaskHandler(ThreadQueueBase):
                 if self._running_output_tasks[i].is_completed():
                     self._running_output_tasks.pop(i)
                     i = i -1
-                i = i + 1            
-            
+                i = i + 1
+
+    ##############################################################################################    
+    
+    def commit_task(self,task):
+        """
+        Puts the specified task into the input queue where it will be executed
+        by one of the internal worker threads. The task's result() method be
+        used for syncronising with task completion. If there are more tasks
+        currently being executed than there are CPUs, then Queue.Full is
+        raised.
+        """
+        #tidy up the list of tasks currently being run, remove the ones that have finished
+        i = 0
+        while i < len(self._running_output_tasks):
+            if self._running_output_tasks[i].is_completed():
+                self._running_output_tasks.pop(i)
+                i = i -1
+            i = i + 1
+        
+        if (len(self._running_output_tasks) > multiprocessing.cpu_count()):
+            raise Queue.Full, "OutputTaskHandler can't keep up with capture rate!"
+        
+        #only queue task if should be alive - tasks submitted after exit is 
+        #encountered will be ignored
+        for thread in self._workers:
+            if not thread.isAlive():
+                print "### Error! ### Worker thread in "+self.name+ " has died!"
+                raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
+        
+        if self._stay_alive:
+            self._task_queue.put(task)
+    
+                
     ##############################################################################################              
      
     def exit(self):

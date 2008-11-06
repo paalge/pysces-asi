@@ -55,7 +55,7 @@ class CaptureManager(ThreadQueueBase):
         CaptureMode objects rather than ThreadTask objects. This is a bit messy, since the object put into the
         queue could be a task object or a CaptureMode object, and each has to be dealt with separately.
         
-        The captureManager MUST still support receiving task objects, since the exit() method relies on
+        The CaptureManager MUST still support receiving task objects, since the exit() method relies on
         this.
         """
         #pull the first capture mode out of the queue
@@ -94,7 +94,7 @@ class CaptureManager(ThreadQueueBase):
                     images = self._camera_manager.capture_images()
                 
                 except GphotoError: #RuntimeError is rasied when gphoto fails in the cameraManager
-                    self._settings_manager.set({"output": "captureManager> Error! Failed to capture/download image."})
+                    self._settings_manager.set({"output": "CaptureManager> Error! Failed to capture/download image."})
                     images = None
                 
                 if images != None:
@@ -132,7 +132,7 @@ class CaptureManager(ThreadQueueBase):
             
             else:
                 #if this happens then something has gone seriously wrong!
-                raise TypeError, str(type(capture_mode))+" is neither a task nor a captureMode and cannot be executed by the captureManager."
+                raise TypeError, str(type(capture_mode))+" is neither a task nor a captureMode and cannot be executed by the CaptureManager."
             
             #check if we have met the exit condition before attempting to get the next task/captureMode
             if not self._stay_alive:

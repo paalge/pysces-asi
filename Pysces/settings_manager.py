@@ -1,7 +1,7 @@
 """
-The settingsManager module provides the settingsManager class for managing all the settings (global
+The settings_manager module provides the SettingsManager class for managing all the settings (global
 variables) for Pysces. It also provides a proxy for this class, allowing the globals to be shared
-between multiple processes. Both the settingsManager and the settingsManagerProxy are thread safe
+between multiple processes. Both the SettingsManager and the SettingsManagerProxy are thread safe
 allowing multiple threads to access global variables safely - at least if you are careful! See the
 documentation for the operate() method for an example of what not to do!
 """
@@ -17,7 +17,7 @@ from multitask import ThreadQueueBase, RemoteTask
 
 class _SettingsManagerProxy(ThreadQueueBase):
     """
-    Proxy class for the settingsManager class. Proxy objects can be passed to child processes
+    Proxy class for the SettingsManager class. Proxy objects can be passed to child processes
     where (once started) they can be used in the same way as their master class. Method calls 
     made on the proxy are executed by the master. Proxies are a way to share a single object 
     between multiple processes. The proxy is thread safe and so can be accessed by multiple 
@@ -27,7 +27,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
     method. If the child process needs to spawn a child process of its own, then multiple
     proxies must be created in the parent process and passed on to the child's child process.
     
-    The settingsManagerProxy does not yet provide register() or operate() methods. This is due
+    The SettingsManagerProxy does not yet provide register() or operate() methods. This is due
     to the fact that you can't pickle function objects defined in a child process.
     """
     def __init__(self, id_, input_queue, output_queue):
@@ -43,7 +43,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
         Starts the proxy running. This must be called from within the process where the proxy is 
         going to be used.
         """
-        ThreadQueueBase.__init__(self,name="NetworkManagerProxy")
+        ThreadQueueBase.__init__(self,name="SettingsManagerProxy")
         self.started = True
         
     ##############################################################################################    
@@ -63,7 +63,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
         
     def get(self, name):
         """
-        See settingsManager.get()
+        See SettingsManager.get()
         """
         assert self.started
         #create task
@@ -79,7 +79,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
     
     def create(self, name, value, persistant=False):
         """
-        See settingsManager.create()
+        See SettingsManager.create()
         """
         assert self.started
         
@@ -96,7 +96,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
     
     def set(self, variables):
         """
-        See settingsManager.set()
+        See SettingsManager.set()
         """  
         #check that variables is a list or tuple
         if type(variables) != type(dict()):
@@ -157,13 +157,13 @@ class _SettingsManagerProxy(ThreadQueueBase):
            
 class SettingsManager(ThreadQueueBase):
     """
-    The settingsManager class is in charge of all global variables used in Pysces. It allows 
+    The SettingsManager class is in charge of all global variables used in Pysces. It allows 
     thread-safe access and modification to the global variables by pipelining requests from
     multiple threads/processes and executing them sequentially. It allows callback functions
     to be registered to particular variables and executes them each time the variable is set.
     It also deals with updating the settings file when the program exits.
     
-    The settingsManager inherits from taskQueueBase, meaning that requests from external threads
+    The SettingsManager inherits from taskQueueBase, meaning that requests from external threads
     are queued and processed sequentially by an internal worker thread. It is very important
     therefore that external threads only call public methods (methods with names that do not
     start with an underscore). It is equally important that internal methods (those called by 
@@ -172,7 +172,7 @@ class SettingsManager(ThreadQueueBase):
     """
     def __init__(self):
         
-        ThreadQueueBase.__init__(self,name="NetworkManager")
+        ThreadQueueBase.__init__(self,name="SettingsManager")
         
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commit_destroy_proxy}
@@ -224,7 +224,7 @@ class SettingsManager(ThreadQueueBase):
                
     ##############################################################################################
     ##############################################################################################    
-    #define public methods - note that the settingsManager worker thread does not have ownership of these
+    #define public methods - note that the SettingsManager worker thread does not have ownership of these
     #methods, and so private methods MUST NOT call them - this will lead to thread lock
     ##############################################################################################
     ##############################################################################################
@@ -239,7 +239,7 @@ class SettingsManager(ThreadQueueBase):
         try/except block since the variable will be created automatically the next time the program is run
         and attempting to create a variable that already exists causes a ValueError exception.
         
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> s.create("new_var","initial value")
         >>> print s.get(["new_var"])
         {'new_var': 'initial value'}
@@ -264,14 +264,14 @@ class SettingsManager(ThreadQueueBase):
     def exit(self):
         """
         Updates the settings file and kills the persistant storage class. This must be called when 
-        you are finished with the settingsManager in order to clean up and stop the worker thread.
+        you are finished with the SettingsManager in order to clean up and stop the worker thread.
         
         Some doctests:
         
         >>> import threading
         >>> print threading.activeCount()
         1
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> print threading.activeCount()
         2
         >>> s.exit()
@@ -284,7 +284,7 @@ class SettingsManager(ThreadQueueBase):
             self.__persistant_storage.exit()
         
             #update the settings file
-            self.set({"output": "settingsManager> Updating settings file"})
+            self.set({"output": "SettingsManager> Updating settings file"})
             self.__settings_file_parser.update_settings_file(self.__variables)
         finally:
             ThreadQueueBase.exit(self)
@@ -299,7 +299,7 @@ class SettingsManager(ThreadQueueBase):
         Returns a dictionary of name:value pairs for all the names in the names list. Attempting
         to get a name which doesn't exist will result in a KeyError.
         
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> s.create("new_var",1)
         >>> s.create("new_var2",2)
         >>> globs = s.get(["new_var","new_var2"])
@@ -333,7 +333,7 @@ class SettingsManager(ThreadQueueBase):
         The operate() method provides a way to apply functions to global variables in a thread-safe
         way. For example if we want to increment a value, we might do:
         
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> s.create("new_var",1)
         >>> s.set({'new_var':s.get(['new_var'])['new_var']+1})
         >>> print s.get(["new_var"])['new_var']
@@ -388,7 +388,7 @@ class SettingsManager(ThreadQueueBase):
         callback is associated with, callback is a callable object which should take a dict as its only 
         argument, variables should be a list of names of variables that should be put into the dict passed
         to the callback.
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> s.create("new","value")
         >>> print s.get(["new"])
         {'new': 'value'}
@@ -431,7 +431,7 @@ class SettingsManager(ThreadQueueBase):
         Sets the values of a group of global variables. The variables argument should be a dict
         of name:value pairs to be set.
         
-        >>> s = settingsManager()
+        >>> s = SettingsManager()
         >>> s.create("new_var","initial value")
         >>> s.create("another_new_var","another new value")
         >>> print s.get(["new_var"])["new_var"]
@@ -477,7 +477,7 @@ class SettingsManager(ThreadQueueBase):
     
     def create_proxy(self):
         """
-        Returns a proxy object for the settingsManager. This can be passed to other processes
+        Returns a proxy object for the SettingsManager. This can be passed to other processes
         allowing them to access and modify the global variables, i.e. it allows the global
         variables to be shared across multiple processes. The proxy object is thread safe 
         (it is also sub-classed from taskQueueBase). The proxy cannot be used to generate 
@@ -495,7 +495,7 @@ class SettingsManager(ThreadQueueBase):
     
     ##############################################################################################     
     ##############################################################################################   
-    #define private methods - these are only executed by the settingsManager worker thread and the 
+    #define private methods - these are only executed by the SettingsManager worker thread and the 
     #thread that calls __init__
     ##############################################################################################
     ##############################################################################################

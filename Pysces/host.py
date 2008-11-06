@@ -23,14 +23,17 @@ class HostManager:
         self.__stay_alive = True
         
         #create variables
-        settings_manager.create("output folder", "")
+        try:
+            settings_manager.create("output folder", "")
+        except ValueError:
+            pass
         try:
             settings_manager.create("tmp dir", None, persistant=True)
         except ValueError:
             pass
         
         try:
-            settings_manager.create("hostManager dirs to remove", [], persistant=True)
+            settings_manager.create("HostManager dirs to remove", [], persistant=True)
         except ValueError:
             pass 
         
@@ -118,7 +121,7 @@ class HostManager:
                 l.append(value_to_append)
                 return l
                       
-            self.__settings_manager.operate("hostManager dirs to remove", append_to_list, glob_vars['tmp dir'])
+            self.__settings_manager.operate("HostManager dirs to remove", append_to_list, glob_vars['tmp dir'])
  
     ##############################################################################################                                   
      
@@ -136,19 +139,19 @@ class HostManager:
         
         while self.__stay_alive:
         
-            dirs_to_rm = self.__settings_manager.get(["hostManager dirs to remove"])["hostManager dirs to remove"]
+            dirs_to_rm = self.__settings_manager.get(["HostManager dirs to remove"])["HostManager dirs to remove"]
             i=0
             while i < len(dirs_to_rm):
                 dir_ = dirs_to_rm[i]
                 
                 if not os.path.isdir(dir_):
                     #the directory no longer exists so we can remove it from the list
-                    self.__settings_manager.operate("hostManager dirs to remove", remove_from_list, dir)
+                    self.__settings_manager.operate("HostManager dirs to remove", remove_from_list, dir)
                     i = i-1
                 elif (len(os.listdir(dir_)) == 0):
                     #the directory is empty so we can delete it and remove it from the list
                     os.rmdir(dir_)
-                    self.__settings_manager.operate("hostManager dirs to remove", remove_from_list, dir)
+                    self.__settings_manager.operate("HostManager dirs to remove", remove_from_list, dir)
                     i = i-1
                 i = i+1
             

@@ -36,7 +36,7 @@ def copy_image(image, output, settings_manager):
     dest_path = os.path.normpath(day_folder + "/" +  output.folder_on_host + "/" + file_ + extension)
     
     #copy the image
-    settings_manager.set({"output":"outputTaskHandler> Copying "+source_path+" to "+dest_path})
+    settings_manager.set({"output":"OutputTaskHandler> Copying "+source_path+" to "+dest_path})
     shutil.copyfile(source_path, dest_path)
     
     return None
@@ -67,7 +67,7 @@ def realtime_keogram(image, output, settings_manager):
         filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']
     except KeyError:
         filename = None
-    
+    image = image.resize((500, 500))
     image = image.binaryMask(output.fov_angle)
     
     if filename == None:
@@ -87,7 +87,7 @@ def realtime_keogram(image, output, settings_manager):
         keo = keo.roll([image])
         keo.save(filename)
 
-    return allskyKeo.plotKeograms([keo])
+    return allskyKeo.plotKeograms([keo], size=(9, 3.7))
 
 ##############################################################################################    
  
