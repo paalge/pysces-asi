@@ -3,18 +3,7 @@ from threading import Thread
 import threading
 import main
 
-def func(frame):
-    for j in range(5):
-        for i in range(2):
-            frame.print_to_term("NetworkManager> some message")
-            frame.print_to_term("CameraManager> some message")
-            frame.print_to_term("Scheduler> some message")
-            frame.print_to_term("OutputTaskHandler> some message")
-            frame.print_to_term("SettingsManager> some message")
-            frame.print_to_term("HostManager> some message")
-            
-        for i in range(2):
-            frame.print_to_term("some message in white\n")
+###############################################################################
 
 class TerminalFrame(wx.TextCtrl):
     """
@@ -34,6 +23,8 @@ class TerminalFrame(wx.TextCtrl):
                                 "HostManager":wx.Colour(0,255,255)}
         
         self.gui_thread = threading.currentThread()
+
+    ###############################################################################
     
     def print_to_term(self,s):
         if not s.endswith('\n'):
@@ -60,22 +51,9 @@ class TerminalFrame(wx.TextCtrl):
         self.current_line_number += 1
         if threading.currentThread() != self.gui_thread:
             wx.MutexGuiLeave()
-
-class Toolbar(wx.Frame):
-    def __init__(self, parent, id, title):
-        #wx.Frame.__init__(self, parent, id, title)
-
-        toolbar = self.CreateToolBar()
-        toolbar.AddLabelTool(wx.ID_EXIT, 'Quit',wx.NullBitmap)
-        toolbar.Realize()
-
-        self.Bind(wx.EVT_TOOL, self.OnExit, id=wx.ID_EXIT)
-
-        self.Centre()
-        self.Show(True)
-
-    def OnExit(self, event):
-        self.Close()
+            
+    ###############################################################################
+###############################################################################
 
 ID_START = 102
 ID_STOP = 103    
@@ -113,7 +91,9 @@ class MainFrame(wx.Frame):
         
         self.cleanup_thread = Thread(target=self.on_close)
         wx.EVT_CLOSE(self, self.exit)
-    
+        
+    ###############################################################################
+        
     def start_pysces(self,event):
         try:
             self.pysces.start()
@@ -121,33 +101,44 @@ class MainFrame(wx.Frame):
             self.menuStop.Enable(True)
         except:
             self.print_to_term("An error occured. See the error terminal for details")
-    
+
+    ###############################################################################
+        
     def stop_pysces(self,event):
         self.menuStart.Enable(True)
         self.menuStop.Enable(False)
         t=threading.Thread(target=self.pysces.stop)
         t.start()
-        
+
+    ###############################################################################
+            
     def print_to_term(self, s):
         self.tw.print_to_term(s)
-    
+        
+    ###############################################################################
+        
     def print_pysces_to_term(self, d):
         self.tw.print_to_term(d['output'])
+        
+    ###############################################################################    
     
     def exit(self,event):
         try:
             self.cleanup_thread.start()
         except RuntimeError:
             pass
-
+        
+    ###############################################################################
+    
     def on_close(self):
         self.pysces.exit()
         self.Update()
         time.sleep(5)
         self.Destroy()
         self.Refresh()
-    
-    
+        
+    ###############################################################################    
+###############################################################################    
     
 if __name__ == "__main__":
 

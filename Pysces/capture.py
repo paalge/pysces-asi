@@ -108,9 +108,7 @@ class CaptureManager(ThreadQueueBase):
                         except Queue.Full:
                             #the outputTaskHandler is busy, wait for a bit and then retry
                             time.sleep(1)
-                    
-                    for output_task in output_tasks:
-                        self._output_task_handler.commit_task(output_task)
+                
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:

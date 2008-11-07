@@ -24,15 +24,19 @@ class Pysces_DSLR_LYR_JPG:
         """
         Returns True if the image can be opened using this plugin, False otherwise.
         """
+        print "testing with plugin"
         try:
             with open(info_filename,"rb") as fp:
                 info = cPickle.load(fp)
-        except:
+        except Exception,ex:
+            print "failed to open site info file"
+            raise ex
             return False
         
         try:
             image = Image.open(image_filename)
         except:
+            print "failed to open image"
             return False
         
         return True

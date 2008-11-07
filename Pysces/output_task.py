@@ -86,9 +86,10 @@ class SubTask:
     the output should be saved when it has been created. The execute method runs the function
     to create the output, but does not save it.
     """
-    def __init__(self, function, image, output_type, output_filename):
+    def __init__(self, function, image, output_type, folder_on_host):
         self.function = function
-        self.output_filename = output_filename
+        self.output_filename = None
+        self._folder_on_host = folder_on_host
         self.output = output_type
         self.image = image
         self.file_on_server = output_type.file_on_server
@@ -99,6 +100,23 @@ class SubTask:
         """
         Runs the function defined in the outputs.py file for this output type
         """
+        print allskyImage.allskyImagePlugins.types
+        #load the image
+        self.image = allskyImage.new(self.image[0],self.image[1])
+        
+        #work out where the output should be saved
+        #get the capture time from the image header
+        capture_time_string = self.image.getInfo()['header']['Creation Time']
+        
+        capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
+        
+        filename = capture_time.strftime(self.output.filename_format)
+        
+        if self.output.folder_on_host != "" and self.output.folder_on_host != None:
+            self.output_filename = os.path.normpath(self._folder_on_host + "/" + self.output.folder_on_host + "/" + filename)
+        else:
+            self.output_filename = os.path.normpath(self._folder_on_host + "/" + filename)
+        
         return self.function(self.image, self.output, settings_manager_proxy)
     
     ##############################################################################################      
@@ -130,6 +148,9 @@ class OutputTaskBase:
         """
         Returns false unless all the subtasks have been completed.
         """
+        if self._removal_thread is None:
+            return False
+        
         return (not self._removal_thread.isAlive())
     
     ##############################################################################################     
@@ -140,8 +161,8 @@ class OutputTaskBase:
         are direct copies of the files. 
         """
         #self.shared_image = manager.ASI(self._image_file, self._image_info_file)        
-        self.image = allskyImage.new(self._image_file, self._image_info_file)
-        
+        #self.image = allskyImage.new(self._image_file, self._image_info_file)
+        self.image=(self._image_file, self._image_info_file)
     ##############################################################################################  
     
     def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager):
@@ -162,26 +183,27 @@ class OutputTaskBase:
             #figure out where to save this output.
         
             #get the capture time from the image header
-            capture_time_string = self.image.getInfo()['header']['Creation Time']
+            #capture_time_string = self.image.getInfo()['header']['Creation Time']
             
-            capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
+            #capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
             
-            filename = capture_time.strftime(output.filename_format)
-            
-            if output.folder_on_host != "" and output.folder_on_host != None:
-                path_to_save_to = os.path.normpath(self._folder_on_host + "/" + output.folder_on_host + "/" + filename)
-            else:
-                path_to_save_to = os.path.normpath(output.folder_on_host + "/" + filename)
+            #filename = capture_time.strftime(output.filename_format)
+            #filename ="test"
+            #if output.folder_on_host != "" and output.folder_on_host != None:
+            #    path_to_save_to = os.path.normpath(self._folder_on_host + "/" + output.folder_on_host + "/" + filename)
+            #else:
+            #    path_to_save_to = os.path.normpath(output.folder_on_host + "/" + filename)
             
             
             #create the subTask object
-            sub_task = SubTask(function, self.image, output, path_to_save_to)
+            sub_task = SubTask(function, self.image, output, self._folder_on_host)
             
             #submit the sub_task for processing
             if output.pipelined:
                 task = pipelined_processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
-                pipelined_processing_pool.commit_task(task)
+                pipelined_processing_pool.commit_task(task)     
+                
             else:
                 task = processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
@@ -222,8 +244,8 @@ class OutputTaskBase:
                 raise ex
                      
         #remove the temporary files associated with this outputTask
-        os.remove(self._image_file)
-        os.remove(self._image_info_file)                
+        #os.remove(self._image_file)
+        #os.remove(self._image_info_file)                
 
     ##############################################################################################  
 ##############################################################################################  
@@ -239,7 +261,7 @@ class OutputTaskLoad(OutputTaskBase):
         Load the image data.
         """
         OutputTaskBase.preprocess(self)
-        self.image.load()
+        #self.image.load()
 
     ##############################################################################################           
 ##############################################################################################  

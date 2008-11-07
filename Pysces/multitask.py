@@ -217,6 +217,7 @@ class ProcessQueueBase:
                 i = 0
                 while i < len(self._active_processes):
                     if not self._active_processes[i].is_alive():
+                        self._active_processes[i].join()
                         self._active_processes.pop(i)
                         self._input_queue.task_done()
                         i = i - 1
