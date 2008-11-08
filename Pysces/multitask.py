@@ -217,18 +217,28 @@ class ProcessQueueBase:
             if task is None:
                 continue    
             
-            #otherwise wait for active process count to fall below max count
-            while self._process_count >= self._max_process_count:
-                i = 0
-                while i < len(self._active_processes):
-                    if not self._active_processes[i].is_alive():
-                        self._active_processes[i].join()
-                        self._active_processes.pop(i)
-                        self._input_queue.task_done()
-                        i = i - 1
-                        self._process_count = self._process_count - 1
-                    i = i + 1
-                time.sleep(0.001)
+            #Python's popen system is not thread safe, so occasionally it will throw up
+            #a OSError "No child processes" during the following bit of code. This *might*
+            #have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
+            #in a try except block
+            
+            try:
+                #otherwise wait for active process count to fall below max count
+                while self._process_count >= self._max_process_count:
+                    i = 0
+                    while i < len(self._active_processes):
+                        if not self._active_processes[i].is_alive():
+                            self._active_processes[i].join()
+                            self._active_processes.pop(i)
+                            self._input_queue.task_done()
+                            i = i - 1
+                            self._process_count = self._process_count - 1
+                        i = i + 1
+                    time.sleep(0.001)
+            except OSError:
+                print "Syncronisation error in ProcessQueueBase! Task has been re-submitted."
+                self._input_queue.put(task)
+                continue
             
             #create a new process to run the task
             p = multiprocessing.Process(target = task.execute)
