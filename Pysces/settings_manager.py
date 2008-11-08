@@ -6,7 +6,7 @@ allowing multiple threads to access global variables safely - at least if you ar
 documentation for the operate() method for an example of what not to do!
 """
 import os
-
+import multiprocessing
 from multiprocessing import Manager
 from threading import Thread
 
@@ -119,6 +119,7 @@ class _SettingsManagerProxy(ThreadQueueBase):
         self.output_queue.put(task)
         
         result = self.input_queue.get()
+        #self.input_queue.task_done()
         
         if isinstance(result, Exception):
             raise result
@@ -177,8 +178,8 @@ class SettingsManager(ThreadQueueBase):
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"get":self.get, "set":self.set, "create":self.create, "register":self.register, "unregister":self.unregister, "operate":self.operate, "destroy proxy":self._commit_destroy_proxy}
         
-        self._manager = Manager()
-        self._remote_input_queue = self._manager.Queue()
+        #self._manager = Manager()
+        self._remote_input_queue = multiprocessing.Queue()#self._manager.Queue()
         #create thread to handle remote tasks
         self.remote_task_thread = Thread(target = self._process_remote_tasks)
         self.remote_task_thread.start()
@@ -219,7 +220,7 @@ class SettingsManager(ThreadQueueBase):
             ThreadQueueBase.exit(self)
             self._remote_input_queue.put(None)
             self.remote_task_thread.join()
-            self._manager.shutdown()
+#            self._manager.shutdown()
             raise ex
                
     ##############################################################################################
@@ -287,10 +288,13 @@ class SettingsManager(ThreadQueueBase):
             self.set({"output": "SettingsManager> Updating settings file"})
             self.__settings_file_parser.update_settings_file(self.__variables)
         finally:
-            ThreadQueueBase.exit(self)
+            self._stay_alive = False
             self._remote_input_queue.put(None)
             self.remote_task_thread.join()
-            self._manager.shutdown()
+            self._remote_input_queue.close()
+            ThreadQueueBase.exit(self)
+#            self._manager.shutdown()
+            print "settings manager has exited"
     
     ##############################################################################################    
     
@@ -509,7 +513,7 @@ class SettingsManager(ThreadQueueBase):
         else:
             id_ = 0
             
-        proxy_input_queue = self._manager.Queue()
+        proxy_input_queue = multiprocessing.Queue()#self._manager.Queue()
         
         self._output_queues[id_] = proxy_input_queue
         
@@ -534,6 +538,7 @@ class SettingsManager(ThreadQueueBase):
         Removes the queue shared with the specified proxy.
         """
         queue = self._output_queues.pop(id_)
+        queue.close()
         
     ##############################################################################################             
         
@@ -545,7 +550,7 @@ class SettingsManager(ThreadQueueBase):
         The result is returned to the proxy via another shared queue (only shared between one proxy
         and the master).
         """
-        while self._stay_alive:
+        while self._stay_alive or (not self._remote_input_queue.empty()):
             remote_task = self._remote_input_queue.get()
             
             if remote_task == None:
@@ -562,7 +567,8 @@ class SettingsManager(ThreadQueueBase):
                 if remote_task.method_name != "destroy proxy":
                     #if the proxy has been destroyed then this queue won't exist any more!
                     self._output_queues[remote_task.id].put(ex)
-            self._remote_input_queue.task_done()
+            remote_task = None
+#            self._remote_input_queue.task_done()
             
     ##############################################################################################                
     

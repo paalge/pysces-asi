@@ -6,11 +6,11 @@ degree of parallelism will scale automatically with the number of available
 CPUs.
 """
 import multiprocessing
-import Queue
+import threading
 
 import network
 from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
-from output_task import OutputTaskBase
+from output_task import OutputTask
 
 ##############################################################################################  
 
@@ -29,16 +29,17 @@ class OutputTaskHandler(ThreadQueueBase):
     queue as well as ThreadTask objects.
     """
     def __init__(self, settings_manager):
-        ThreadQueueBase.__init__(self, name="OutputTaskHandler")
         
-        self._running_output_tasks = []
+        self.__pipelined_lock = threading.Lock()
+        
+        ThreadQueueBase.__init__(self, name="OutputTaskHandler",workers=multiprocessing.cpu_count(),maxsize=multiprocessing.cpu_count()+2)
         
         #create a processing pool to produce the outputs asyncronously - this has as many workers as there are CPU cores
-        self._processing_pool = ProcessQueueBase(workers=multiprocessing.cpu_count())
+        self._processing_pool = ProcessQueueBase(workers=multiprocessing.cpu_count(),name="Processing Pool")
         
         #create a processing pool to produce outputs in the order that their respective image types
         #are recieved from the camera (useful for creating keograms for example)
-        self._pipelined_processing_pool = ProcessQueueBase(workers=1)
+        self._pipelined_processing_pool = ProcessQueueBase(workers=1,name="Pipelined Processing Pool")
         
         #create NetworkManager object to handle copying outputs to the webserver
         self._network_manager = network.NetworkManager(settings_manager)        
@@ -56,39 +57,44 @@ class OutputTaskHandler(ThreadQueueBase):
         """
         while self._stay_alive or (not self._task_queue.empty()):
             
+            #grab the pipelined lock - this ensures that pipelined subtasks are put into the
+            #piplined processing queue in the same order as they are taken out of this queue
+            self.__pipelined_lock.acquire()
+            
             #pull an outputTask out of the queue
             output_task = self._task_queue.get()
             
             #there is the chance that this could be a ThreadTask object, rather than a 
             #OutputTask object, and we need to be able to excute it.
             if isinstance(output_task, ThreadTask):
+                self.__pipelined_lock.release()
+                print "recieved exit command"
                 output_task.execute()
                 self._task_queue.task_done()
                 
-            elif isinstance(output_task, OutputTaskBase):
-
-                #add to the list of running tasks
-                self._running_output_tasks.append(output_task)
+            elif isinstance(output_task, OutputTask):
                     
                 #run all the sub tasks in separate processes
                 output_task.run_subtasks(self._processing_pool, self._pipelined_processing_pool, self._network_manager)
+                self.__pipelined_lock.release()
+                
+                #wait for all the subtasks to be executed
+                output_task.wait()
+                
+                #remove the temporary files
+                output_task.remove_temp_files()
                 
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
+                
 
             else:
+                self.__pipelined_lock.release()
                 #if this happens then something has gone seriously wrong!
                 raise(TypeError, str(type(output_task))+
                       " is neither a ThreadTask nor an OutputTask and cannot be executed" +
                       " by the OutputTaskHandler.")
-            
-            #tidy up the list of tasks currently being run, remove the ones that have finished
-            i = 0
-            while i < len(self._running_output_tasks):
-                if self._running_output_tasks[i].is_completed():
-                    self._running_output_tasks.pop(i)
-                    i = i -1
-                i = i + 1
+        self._exit_event.set()
 
     ##############################################################################################    
     
@@ -99,29 +105,20 @@ class OutputTaskHandler(ThreadQueueBase):
         used for syncronising with task completion. If there are more tasks
         currently being executed than there are CPUs, then Queue.Full is
         raised.
-        """
-        #tidy up the list of tasks currently being run, remove the ones that have finished
-        i = 0
-        while i < len(self._running_output_tasks):
-            if self._running_output_tasks[i].is_completed():
-                self._running_output_tasks.pop(i)
-                i = i -1
-            i = i + 1
-        
-        if (len(self._running_output_tasks) > multiprocessing.cpu_count()):
-            raise Queue.Full, "OutputTaskHandler can't keep up with capture rate!"
-        
+        """      
         #only queue task if should be alive - tasks submitted after exit is 
         #encountered will be ignored
+        flag = False
         for thread in self._workers:
-            if not thread.isAlive():
+            if thread.isAlive():
+                flag = True
+            if not flag:
                 print "### Error! ### Worker thread in "+self.name+ " has died!"
                 raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
         
         if self._stay_alive:
             self._task_queue.put(task)
-    
-                
+                   
     ##############################################################################################              
      
     def exit(self):
@@ -129,16 +126,19 @@ class OutputTaskHandler(ThreadQueueBase):
         Waits for all the outstanding OutputTasks to be completed then shuts down the 
         processing pools and the internal worker thread.
         """
-        #wait for all the output_tasks to be completed
-        for output_task in self._running_output_tasks:
-            output_task.exit()
+        #kill own worker thread
+        ThreadQueueBase.exit(self)
+        print "killed self"        
         
         #shutdown the processing pools
         self._processing_pool.exit()
         self._pipelined_processing_pool.exit()
+        print "joined processing pools"
         
-        #kill own worker thread
-        ThreadQueueBase.exit(self)
+        #kill the network manager
+        self._network_manager.exit()
+        print "killed network manager"
+        
 
     ##############################################################################################  
 ##############################################################################################             

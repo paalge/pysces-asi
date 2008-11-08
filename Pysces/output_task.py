@@ -25,18 +25,7 @@ def create_output_tasks(capture_mode, image_files, folder_on_host, settings_mana
             if output.image_type.image_type == image_type:
                 outputs.append(output)
     
-        #creates different sub-classes of outputTaskBase, depending on what preprocessing is needed
-        output_types = set([])
-        for output in outputs:
-            output_types.add(output.type)
-    
-        output_types = list(output_types)
-    
-        if len(output_types) == 1 and output_types[0] == "raw":
-            #no preprocessing required, just copying images
-            output_tasks.append(OutputTaskBase(outputs, image_files[image_type], folder_on_host, settings_manager))
-        else:
-            output_tasks.append(OutputTaskLoad(outputs, image_files[image_type], folder_on_host, settings_manager))
+            output_tasks.append(OutputTask(outputs, image_files[image_type], folder_on_host, settings_manager))
                                 
     return output_tasks  
 
@@ -68,14 +57,15 @@ def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
         #copy the output to the server if required
         if sub_task.file_on_server != None:
             network_manager_proxy.copy_to_server(sub_task.output_filename, sub_task.file_on_server)
-               
-        #shutdown the proxies
-        settings_manager_proxy.exit()
-        network_manager_proxy.exit()
         
     except Exception, ex:
         traceback.print_exc()
         raise ex
+    
+    finally:
+        #shutdown the proxies
+        settings_manager_proxy.exit()
+        network_manager_proxy.exit()
         
 ##############################################################################################          
         
@@ -96,33 +86,61 @@ class SubTask:
         
     ##############################################################################################          
     
-    def execute(self, settings_manager_proxy):
+    def execute(self, settings_manager_proxy, network_manager_proxy):
         """
         Runs the function defined in the outputs.py file for this output type
         """
-        print allskyImage.allskyImagePlugins.types
-        #load the image
-        self.image = allskyImage.new(self.image[0],self.image[1])
         
-        #work out where the output should be saved
-        #get the capture time from the image header
-        capture_time_string = self.image.getInfo()['header']['Creation Time']
+        try:
+            #start the proxies
+            settings_manager_proxy.start()
+            network_manager_proxy.start()
         
-        capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
+            #load the image
+            image = allskyImage.new(self.image[0],self.image[1])
+            
+            #work out where the output should be saved
+            #get the capture time from the image header
+            capture_time_string = image.getInfo()['header']['Creation Time']
+            
+            capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
+            
+            filename = capture_time.strftime(self.output.filename_format)
+            
+            if self.output.folder_on_host != "" and self.output.folder_on_host != None:
+                self.output_filename = os.path.normpath(self._folder_on_host + "/" + self.output.folder_on_host + "/" + filename)
+            else:
+                self.output_filename = os.path.normpath(self._folder_on_host + "/" + filename)
+            
         
-        filename = capture_time.strftime(self.output.filename_format)
+            #run the subtask execution function (this is what actually produces the output)
+            output = self.function(image, self.output, settings_manager_proxy)
+            
+            #save the output on the host
+            if output != None:
+                try:
+                    output.save(self.output_filename)
+                except AttributeError:
+                    #this is added for compatibility with matplotlib figure objects
+                    output.savefig(self.output_filename)
+            
+            #copy the output to the server if required
+            if self.file_on_server != None:
+                network_manager_proxy.copy_to_server(self.output_filename, self.file_on_server)
         
-        if self.output.folder_on_host != "" and self.output.folder_on_host != None:
-            self.output_filename = os.path.normpath(self._folder_on_host + "/" + self.output.folder_on_host + "/" + filename)
-        else:
-            self.output_filename = os.path.normpath(self._folder_on_host + "/" + filename)
+        except Exception, ex:
+            traceback.print_exc()
+            raise ex
         
-        return self.function(self.image, self.output, settings_manager_proxy)
+        finally:
+            #shutdown the proxies
+            settings_manager_proxy.exit()
+            network_manager_proxy.exit()
     
     ##############################################################################################      
 ##############################################################################################  
            
-class OutputTaskBase:
+class OutputTask:
     """
     Base class for OutputTask classes. outputTasks objects are passed to the OutputTaskHandler
     which uses them to produce a list of tasks that need to be completed regarding output
@@ -133,36 +151,14 @@ class OutputTaskBase:
     then the temporary image files can be removed.
     """
     def __init__(self, outputs, image_file, folder_on_host, settings_manager):
-        self._image_file = image_file[0]
-        self._image_info_file = image_file[1]
+        self._image_file = image_file
         self._outputs = outputs
-        self.image = None
         self._folder_on_host = folder_on_host
         self._settings_manager = settings_manager
-        self._removal_thread = None
         self._running_subtasks = []
-            
-    ##############################################################################################  
-        
-    def is_completed(self):
-        """
-        Returns false unless all the subtasks have been completed.
-        """
-        if self._removal_thread is None:
-            return False
-        
-        return (not self._removal_thread.isAlive())
-    
-    ##############################################################################################     
-     
-    def preprocess(self):
-        """
-        In the base class, there is no need to actually load the image data, since the only sub-tasks
-        are direct copies of the files. 
-        """
-        #self.shared_image = manager.ASI(self._image_file, self._image_info_file)        
-        #self.image = allskyImage.new(self._image_file, self._image_info_file)
-        self.image=(self._image_file, self._image_info_file)
+        self._running_subtasks_lock = threading.Lock()
+        self.__remove_files = True
+                 
     ##############################################################################################  
     
     def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager):
@@ -171,97 +167,49 @@ class OutputTaskBase:
         pools for execution.
         """
         
-        #run the pre-processing
-        self.preprocess()
-        
         #build the subtask objects
         for output in self._outputs:
             
             #get the function that the sub-task needs to run
             function = TYPES[output.type]
-    
-            #figure out where to save this output.
-        
-            #get the capture time from the image header
-            #capture_time_string = self.image.getInfo()['header']['Creation Time']
-            
-            #capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
-            
-            #filename = capture_time.strftime(output.filename_format)
-            #filename ="test"
-            #if output.folder_on_host != "" and output.folder_on_host != None:
-            #    path_to_save_to = os.path.normpath(self._folder_on_host + "/" + output.folder_on_host + "/" + filename)
-            #else:
-            #    path_to_save_to = os.path.normpath(output.folder_on_host + "/" + filename)
-            
             
             #create the subTask object
-            sub_task = SubTask(function, self.image, output, self._folder_on_host)
+            sub_task = SubTask(function, self._image_file, output, self._folder_on_host)
             
             #submit the sub_task for processing
             if output.pipelined:
-                task = pipelined_processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
+                task = pipelined_processing_pool.create_task(sub_task.execute, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
                 pipelined_processing_pool.commit_task(task)     
                 
             else:
-                task = processing_pool.create_task(_process_subtask, sub_task, self._settings_manager.create_proxy(), network_manager.create_proxy())
+                task = processing_pool.create_task(sub_task.execute, self._settings_manager.create_proxy(), network_manager.create_proxy())
                 self._running_subtasks.append(task)
                 processing_pool.commit_task(task)
             
-        #start a new thread to remove the temporary image files when all sub_tasks are complete
-        self._removal_thread = threading.Thread(target = self._exit)
-        self._removal_thread.start()
-            
     ##############################################################################################  
     
-    def exit(self):
-        """
-        Blocks until all sub-tasks have been completed and temporary files have been removed.
-        """
-        self._removal_thread.join()
-     
-    ##############################################################################################  
-    
-    def _exit(self):
-        """
-        Method run by removal thread. Waits until all subtasks have completed successfully, and then removes
-        the temporary image files. If any of the sub-tasks fail to complete, then the temporary image files
-        are left in place.
-        """
-        
-        #wait for all the sub_tasks to complete
-        for sub_task_result in self._running_subtasks:
-            
+    def wait(self):
+        self._running_subtasks_lock.acquire()
+        while 0 < len(self._running_subtasks):
+            self._running_subtasks[0].completed.wait()
             try:
-                sub_task_result.result()
+               self._running_subtasks[0].result()
+            except:
+               self.__remove_files = False
+               self._settings_manager.set({'output':"outputTask> Error! Processing pool failed to execute one or more sub-tasks"})
+               self._settings_manager.set({'output':"outputTask> Leaving temporary files in place"})
+               
+            self._running_subtasks.pop(0)
+        self._running_subtasks_lock.release()
             
-            #if the sub_task did not complete successfully, then don't delete the temp files
-            except Exception, ex:
-                self._settings_manager.set({'output':"outputTask> Error! Processing pool failed to execute one or more sub-tasks"})
-                self._settings_manager.set({'output':"outputTask> Leaving temporary files in place"})
-                
-                raise ex
-                     
-        #remove the temporary files associated with this outputTask
-        #os.remove(self._image_file)
-        #os.remove(self._image_info_file)                
-
+    ##############################################################################################    
+    
+    def remove_temp_files(self):
+        return
+        if self.__remove_files:
+            os.remove(self._image_file[0])
+            os.remove(self._image_file[1]) 
+            
     ##############################################################################################  
-##############################################################################################  
-
-class OutputTaskLoad(OutputTaskBase):
-    """
-    Sub-class of OutputTaskBase which loads the image data into the allskyImage object.
-    """
-    ##############################################################################################  
-        
-    def preprocess(self):
-        """
-        Load the image data.
-        """
-        OutputTaskBase.preprocess(self)
-        #self.image.load()
-
-    ##############################################################################################           
 ##############################################################################################  

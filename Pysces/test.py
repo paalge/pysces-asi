@@ -1,21 +1,16 @@
-"""
-The test module runs all the doctests on Pysces. It is a good idea to run this after a new installation
-or after any changes to the code. The modules_to_doctest variable must be updated manually.
-"""
+import multiprocessing
+import multitask
+import PASKIL_jpg_plugin
+from PASKIL import allskyImage
+import time
 
-import unittest
-import doctest,sys
-
-#list of all modules in the Pysces package to be tested 
-modules_to_doctest = ["settingsManager","captureManager"]
-
-
-for mod in modules_to_doctest:
-    print "Running doctests for "+mod
-    result = doctest.testmod(__import__(mod))
-    print mod+" failed ",result[0]," out of ",result[1]," tests."
-
-print "Done"
-
-
-
+def f():
+    return [0.1]*100
+p = multitask.ProcessQueueBase(workers=1)
+for j in range(2000):    
+    
+    for i in range(200):
+        t = p.create_task(f)
+        p.commit_task(t)
+    t.result()
+p.exit()

@@ -10,7 +10,7 @@ import string
 import stat
 import shutil
 
-from multiprocessing import Manager
+import multiprocessing
 from threading import Thread
 from subprocess import Popen, PIPE
 
@@ -112,8 +112,8 @@ class NetworkManager(ThreadQueueBase):
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"copyToServer":self.copy_to_server, "destroy proxy":self._commit_destroy_proxy}
         
-        self._manager = Manager()
-        self._remote_input_queue = self._manager.Queue()
+        #self._manager = Manager()
+        self._remote_input_queue = multiprocessing.Queue()#self._manager.Queue()
         self._output_queues = {}
         #create thread to handle remote tasks
         self.remote_task_thread = Thread(target = self._process_remote_tasks)
@@ -222,10 +222,12 @@ class NetworkManager(ThreadQueueBase):
         Kills the internal worker thread, the remote task reading thread and the 
         manager process.
         """
-        ThreadQueueBase.exit(self)
+        self._stay_alive = False
         self._remote_input_queue.put(None)
         self.remote_task_thread.join()
-        self._manager.shutdown()
+        self._remote_input_queue.close()
+        ThreadQueueBase.exit(self)
+        #self._manager.shutdown()
     
     ##############################################################################################         
     
@@ -233,7 +235,8 @@ class NetworkManager(ThreadQueueBase):
         """
         Removes the queue shared with the specified proxy.
         """
-        self._output_queues.pop(id)
+        q = self._output_queues.pop(id)
+        q.close()
 
     ##############################################################################################         
 
@@ -245,7 +248,7 @@ class NetworkManager(ThreadQueueBase):
         The result is returned to the proxy via another shared queue (only shared between one proxy
         and the master).
         """
-        while self._stay_alive:
+        while self._stay_alive or (not self._remote_input_queue.empty()):
             remote_task = self._remote_input_queue.get()
             
             if remote_task == None:
@@ -291,7 +294,7 @@ class NetworkManager(ThreadQueueBase):
             id = 0
         
         #create the shared queue object for the proxy's input queue
-        proxy_input_queue = self._manager.Queue()
+        proxy_input_queue = multiprocessing.Queue()#self._manager.Queue()
         self._output_queues[id] = proxy_input_queue
         
         return _NetworkManagerProxy(id, proxy_input_queue, self._remote_input_queue)

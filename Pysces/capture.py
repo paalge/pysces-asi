@@ -61,7 +61,7 @@ class CaptureManager(ThreadQueueBase):
         #pull the first capture mode out of the queue
         capture_mode = self._task_queue.get()   
         
-        while True:
+        while self._stay_alive or (not self._task_queue.empty()):
             
             #the object from the queue could be a task object, so we should try executing it first
             #before we assume that it is a capture mode - this is a bit of a hack, but is needed to 
@@ -139,7 +139,8 @@ class CaptureManager(ThreadQueueBase):
             #sit and wait for the next task or captureMode
             capture_mode = self._task_queue.get()
             self._task_queue.task_done()
-
+        self._exit_event.set()
+        
     ##############################################################################################  
     
     def exit(self):

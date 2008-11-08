@@ -41,7 +41,7 @@ class ThreadTask:
         self._args = args
         self._kwargs = kwargs
         self._return_value = None
-        self._completed = Event()
+        self.completed = Event()
         self._exception = None
         self._traceback = None
 
@@ -64,7 +64,7 @@ class ThreadTask:
 
     
         #set the event to true, to show that the task is finished
-        self._completed.set()
+        self.completed.set()
 
     ###########################################################################
         
@@ -75,7 +75,7 @@ class ThreadTask:
         task is completed. If the target function raised an exception when it
         was executed, then calling result() will raise the same exception.
         """
-        self._completed.wait()
+        self.completed.wait()
         if self._exception is None:
             return self._return_value
         else:
@@ -95,6 +95,7 @@ class ThreadQueueBase:
         self._workers = []
         self._stay_alive = True
         self.name = name
+        self._exit_event = Event()
         for i in range(workers):
             self._workers.append(Thread(target = self._process_tasks))
             self._workers[i].setName(self.name + " thread "+str(i))
@@ -116,7 +117,9 @@ class ThreadQueueBase:
             
             #tell the queue that execution is complete
             self._task_queue.task_done()
-
+        
+        self._exit_event.set()
+        
     ###########################################################################
     
     def create_task(self, func, *args, **kwargs):
@@ -154,7 +157,9 @@ class ThreadQueueBase:
         #submit one exit task for each thread 
         for i in xrange(len(self._workers)):
             task = self.create_task(self._exit)
-            self.commit_task(task)
+            self._task_queue.put(task)
+            self._exit_event.wait()
+            self._exit_event.clear()
         
         #block until outstanding tasks have been completed
         for thread in self._workers:
@@ -179,7 +184,7 @@ class ProcessQueueBase:
     """
     def __init__(self, workers=1, maxsize=0,name = "Un-named"):
         #create a manager for creating shared objects
-        self._manager = multiprocessing.Manager()
+        #self._manager = multiprocessing.Manager()
         self.name = name
         #create an input queue
         self._input_queue = Queue(maxsize=maxsize)
@@ -238,9 +243,10 @@ class ProcessQueueBase:
         Creates a new task object which can be submitted for execution using 
         the commit_task() method.
         """
-        n = self._manager.Namespace()
-        e = self._manager.Event()
-        task = ProcessTask(n, e, func, *args, **kwargs)
+        #n = self._manager.Namespace()
+        q = multiprocessing.Queue()
+        e = multiprocessing.Event()
+        task = ProcessTask(q, e, func, *args, **kwargs)
         return task
 
     ###########################################################################
@@ -271,7 +277,7 @@ class ProcessQueueBase:
             process.join()
         
         #kill the manager
-        self._manager.shutdown()
+        #self._manager.shutdown()
         
     ###########################################################################        
 ###########################################################################              
@@ -282,13 +288,13 @@ class ProcessTask:
     ProcessTask object provides a method to execute the task, and a method to 
     retrieve the result when it is ready.
     """
-    def __init__(self, shared_namespace, shared_event, func, *args, **kwargs):
+    def __init__(self, return_queue, shared_event, func, *args, **kwargs):
         
         self._function = func
         self._args = args
         self._kwargs = kwargs
-        self.namespace = shared_namespace
-        self.namespace.exception = None
+        self.return_queue = return_queue
+        #self.namespace.exception = None
         self.completed = shared_event
 
     ###########################################################################
@@ -300,13 +306,13 @@ class ProcessTask:
         #try to run the function. If it fails then store the exception object 
         #to pass to outside thread
         try:
-            self.namespace.return_value = self._function(*self._args, 
-                                                         **self._kwargs)
+            self.return_queue.put(self._function(*self._args, 
+                                                         **self._kwargs))
        
        #catch any exceptions that were raised during execution so that they can
        #be raised in the calling thread, rather than the internal worker thread 
-        except Exception, self.namespace.exception:
-            pass
+        except Exception, ex:
+            self.return_queue.put(ex)
         
         self.completed.set()
 
@@ -320,10 +326,12 @@ class ProcessTask:
         was executed, then calling result() will raise the same exception.
         """
         self.completed.wait()
-        if self.namespace.exception is None:
-            return self.namespace.return_value
+        return_value = self.return_queue.get()
+        
+        if isinstance(return_value,Exception):
+            raise return_value
         else:
-            raise self.namespace.exception
-
+            return return_value
+        
     ###########################################################################
 ###########################################################################
