@@ -240,11 +240,18 @@ class ProcessQueueBase:
                 self._input_queue.put(task)
                 continue
             
-            #create a new process to run the task
-            p = multiprocessing.Process(target = task.execute)
-            self._active_processes.append(p)
-            self._process_count = self._process_count +1
-            p.start()
+            not_started = True
+            while not_started:
+                try:
+                    #create a new process to run the task
+                    p = multiprocessing.Process(target = task.execute)
+                    self._active_processes.append(p)
+                    self._process_count = self._process_count +1
+                    p.start()
+                    not_started=False
+                except OSError:
+                    self._active_processes.remove(p)
+                    self._process_count = self._process_count -1
 
     ###########################################################################
   
