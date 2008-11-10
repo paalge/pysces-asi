@@ -7,6 +7,7 @@ CPUs.
 """
 import multiprocessing
 import threading
+import sys,gc
 
 import network
 from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
@@ -84,10 +85,11 @@ class OutputTaskHandler(ThreadQueueBase):
                 #remove the temporary files
                 output_task.remove_temp_files()
                 
+                
+                
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
-                
-
+                #del output_task
             else:
                 self.__pipelined_lock.release()
                 #if this happens then something has gone seriously wrong!

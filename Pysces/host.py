@@ -103,6 +103,7 @@ class HostManager:
         Creates a new temporary directory, and adds it to the list of directories to be
         removed, so that it is deleted when it is empty.
         """
+        self.__settings_manager.set({"tmp dir":"/home/nialp/tmp"})
         glob_vars = self.__settings_manager.get(["tmp dir", "output folder"])
 
         #if the new tmp dir is the same as the old one and still exists then return

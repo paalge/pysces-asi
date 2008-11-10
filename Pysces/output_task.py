@@ -25,7 +25,7 @@ def create_output_tasks(capture_mode, image_files, folder_on_host, settings_mana
             if output.image_type.image_type == image_type:
                 outputs.append(output)
     
-            output_tasks.append(OutputTask(outputs, image_files[image_type], folder_on_host, settings_manager))
+        output_tasks.append(OutputTask(outputs, image_files[image_type], folder_on_host, settings_manager))
                                 
     return output_tasks  
 

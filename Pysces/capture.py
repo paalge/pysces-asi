@@ -107,8 +107,7 @@ class CaptureManager(ThreadQueueBase):
                             i += 1
                         except Queue.Full:
                             #the outputTaskHandler is busy, wait for a bit and then retry
-                            time.sleep(1)
-                
+                            time.sleep(1)                
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
