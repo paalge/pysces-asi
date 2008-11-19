@@ -24,7 +24,6 @@ from multitask import ThreadQueueBase, ThreadTask
 from data_storage_classes import CaptureMode
 from output_task import create_output_tasks
 from camera import GphotoError
-from testCameraManager import D80Simulator
 
 ##############################################################################################  
 
@@ -40,7 +39,7 @@ class CaptureManager(ThreadQueueBase):
         try:
             self._settings_manager = settings_manager
             self._host_manager = host.HostManager(settings_manager)
-            self._camera_manager = D80Simulator()#CameraManager(settings_manager)
+            self._camera_manager = CameraManager(settings_manager)
             self._output_task_handler = output_task_handler.OutputTaskHandler(settings_manager)
 
         except Exception, ex:
