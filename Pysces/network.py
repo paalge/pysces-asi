@@ -227,7 +227,6 @@ class NetworkManager(ThreadQueueBase):
         self.remote_task_thread.join()
         self._remote_input_queue.close()
         ThreadQueueBase.exit(self)
-        #self._manager.shutdown()
     
     ##############################################################################################         
     

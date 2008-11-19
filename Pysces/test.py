@@ -1,8 +1,19 @@
 import multiprocessing
+import settings_manager
 import multitask
 import PASKIL_jpg_plugin
 from PASKIL import allskyImage
 import time
+
+
+s = settings_manager.SettingsManager()
+
+for i in range(10000):
+    p = s.create_proxy()
+    p.start()
+    p.get(["output"])
+    p.exit()
+s.exit()
 
 
 def f2():

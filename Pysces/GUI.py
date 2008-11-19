@@ -37,15 +37,18 @@ class TerminalFrame(wx.TextCtrl):
         except KeyError:
             font_colour = wx.Colour(255,255,255)
         
+        #if it is not the main GUI thread that is writing to the terminal then we have to 
+        #get the GUI mutex before priting to the term - wx is not threadsafe otherwise
         if threading.currentThread() != self.gui_thread:
-            print "waiting for mutex"
             wx.MutexGuiEnter()
-            print "got mutex"
+        
+        #if the history length has been exceeded then start deleting lines
         if self.current_line_number >= self.history_length:
-            length=frame.tw.GetLineLength(0)
+            length=self.GetLineLength(0)
             self.Remove(0, length+1)
             self.current_line_number -= 1
-            
+        
+        #print the text to the terminal window    
         self.SetDefaultStyle(wx.TextAttr(font_colour))
         self.WriteText(s)
         self.current_line_number += 1
@@ -66,6 +69,7 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, None, wx.NewId(), 'pysces_asi: All-sky Camera Control for Linux',size=(800, 500))
         
         self.tw = TerminalFrame(self)
+        self.tw.SetEditable(False)
         
         #create the main pysces objects
         self.pysces = main.MainBox()
@@ -81,7 +85,7 @@ class MainFrame(wx.Frame):
         self.menuStop = capture_menu.Append(ID_STOP, "&End Capture", "Stop the capture program")
         self.menuStop.Enable(False)
         menuBar = wx.MenuBar()
-        menuBar.Append(capture_menu, "&Capture");
+        menuBar.Append(capture_menu, "&Capture")
 
         self.SetMenuBar(menuBar)
         

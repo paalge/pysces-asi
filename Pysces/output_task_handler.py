@@ -85,8 +85,6 @@ class OutputTaskHandler(ThreadQueueBase):
                 #remove the temporary files
                 output_task.remove_temp_files()
                 
-                
-                
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
                 #del output_task

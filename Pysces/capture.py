@@ -24,6 +24,7 @@ from multitask import ThreadQueueBase, ThreadTask
 from data_storage_classes import CaptureMode
 from output_task import create_output_tasks
 from camera import GphotoError
+from testCameraManager import D80Simulator
 
 ##############################################################################################  
 
@@ -39,7 +40,7 @@ class CaptureManager(ThreadQueueBase):
         try:
             self._settings_manager = settings_manager
             self._host_manager = host.HostManager(settings_manager)
-            self._camera_manager = CameraManager(settings_manager)
+            self._camera_manager = D80Simulator()#CameraManager(settings_manager)
             self._output_task_handler = output_task_handler.OutputTaskHandler(settings_manager)
 
         except Exception, ex:
@@ -147,22 +148,18 @@ class CaptureManager(ThreadQueueBase):
         Shuts down all the objects that this class created, and then kills its own
         internal worker thread.
         """
-        try:
-            self._output_task_handler.exit()
-        except AttributeError:
-            pass
+        #kill own worker thread
+        ThreadQueueBase.exit(self)
+        
         try:
             self._camera_manager.exit()
         except AttributeError:
             pass
         
         try:
-            self._host_manager.exit()
+            self._output_task_handler.exit()
         except AttributeError:
-            pass    
-        
-        #kill own worker thread
-        ThreadQueueBase.exit(self)
-        
+            pass  
+     
     ##############################################################################################
 ##############################################################################################             
