@@ -8,7 +8,7 @@ OutputTaskHandler for processing.
 The CaptureManager also creates a HostManager object and uses this to update the
 folder structure on the host before each image is captured.
 """
-import traceback
+#import traceback
 import Queue
 import datetime
 import time
@@ -24,6 +24,7 @@ from multitask import ThreadQueueBase, ThreadTask
 from data_storage_classes import CaptureMode
 from output_task import create_output_tasks
 from camera import GphotoError
+#from testCameraManager import D80Simulator
 
 ##############################################################################################  
 
@@ -43,7 +44,7 @@ class CaptureManager(ThreadQueueBase):
             self._output_task_handler = output_task_handler.OutputTaskHandler(settings_manager)
 
         except Exception, ex:
-            traceback.print_exc()
+#            traceback.print_exc()
             self.exit()
             raise ex
 
