@@ -138,7 +138,7 @@ class CaptureManager(ThreadQueueBase):
             
             #sit and wait for the next task or captureMode
             capture_mode = self._task_queue.get()
-            self._task_queue.task_done()
+
         self._exit_event.set()
         
     ##############################################################################################  
