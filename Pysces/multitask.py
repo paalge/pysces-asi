@@ -61,6 +61,8 @@ class ThreadTask:
         except Exception, self._exception:
             print "\nException in thread: ", currentThread()
             traceback.print_exc()
+       # except Exception, self._exception:
+       #     pass
 
     
         #set the event to true, to show that the task is finished
@@ -117,7 +119,8 @@ class ThreadQueueBase:
             
             #tell the queue that execution is complete
             self._task_queue.task_done()
-        
+            
+            del task
         self._exit_event.set()
         
     ###########################################################################
@@ -292,9 +295,6 @@ class ProcessQueueBase:
         
         for process in self._active_processes:
             process.join()
-        
-        #kill the manager
-        #self._manager.shutdown()
         
     ###########################################################################        
 ###########################################################################              

@@ -22,7 +22,7 @@ import os
 import shutil
 import datetime
 
-from PASKIL import allskyKeo
+from PASKIL import allskyKeo,allskyPlot
 
 ##############################################################################################
 
@@ -61,7 +61,7 @@ def centered_image(image, output, settings_manager):
 ##############################################################################################
 
 def realtime_keogram(image, output, settings_manager):
-    
+    print "creating keogram!"
     #see if a realtime keogram has been created yet
     try:
         filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']
@@ -73,9 +73,9 @@ def realtime_keogram(image, output, settings_manager):
     if filename == None:
         
         #work out the start and end times for the keogram based on the setting in the settings file
-        end_time = datetime.datetime.utcnow()
+        end_time = None#datetime.datetime.utcnow()
         time_span = datetime.timedelta(hours = output.time_range)
-        start_time = end_time - time_span
+        start_time = None#end_time - time_span
              
         keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width, data_spacing=output.data_spacing)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
@@ -86,8 +86,9 @@ def realtime_keogram(image, output, settings_manager):
         keo = allskyKeo.load(filename)
         keo = keo.roll([image])
         keo.save(filename)
+    print "submitted to allskyPlot"
 
-    return allskyKeo.plotKeograms([keo], size=(9, 3.7))
+    return allskyPlot.plot([keo], size=(9, 3.7))
 
 ##############################################################################################    
  

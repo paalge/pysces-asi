@@ -84,10 +84,11 @@ class OutputTaskHandler(ThreadQueueBase):
                 
                 #remove the temporary files
                 output_task.remove_temp_files()
+                del output_task
                 
                 #tell the queue that execution is complete
                 self._task_queue.task_done()
-                #del output_task
+
             else:
                 self.__pipelined_lock.release()
                 #if this happens then something has gone seriously wrong!

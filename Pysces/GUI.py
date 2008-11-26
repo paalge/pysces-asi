@@ -2,6 +2,13 @@ import wx,time
 from threading import Thread
 import threading
 import main
+import gc
+
+#gc.set_debug(gc.DEBUG_LEAK)
+
+#define event IDs for start and stop menu items in main frame
+ID_START = 102
+ID_STOP = 103
 
 ###############################################################################
 
@@ -10,7 +17,7 @@ class TerminalFrame(wx.TextCtrl):
     Frame to display scrolling text in different colours.
     """
     def __init__(self,parent_frame,history_length=250):
-        self.history_length = history_length
+        self.history_length = history_length #number of lines that are stored by the terminal
         self.current_line_number = 0
         wx.TextCtrl.__init__(self,parent_frame,-1, style = wx.TE_MULTILINE)
         self.SetBackgroundColour(wx.BLACK)
@@ -57,9 +64,7 @@ class TerminalFrame(wx.TextCtrl):
             
     ###############################################################################
 ###############################################################################
-
-ID_START = 102
-ID_STOP = 103    
+    
 class MainFrame(wx.Frame):
     """
     Main viewing window (or frame) containing the terminal and control buttons.
@@ -137,7 +142,6 @@ class MainFrame(wx.Frame):
     def on_close(self):
         self.pysces.exit()
         self.Update()
-        time.sleep(5)
         self.Destroy()
         self.Refresh()
         
@@ -152,4 +156,4 @@ if __name__ == "__main__":
     frame = MainFrame()
     frame.Show()
     
-    app.MainLoop ()
+    app.MainLoop()

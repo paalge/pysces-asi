@@ -2,6 +2,9 @@ import os
 import datetime
 import threading
 import traceback
+import gc
+import sys
+import multiprocessing
 
 from outputs import TYPES
 from PASKIL import allskyImage
@@ -31,41 +34,41 @@ def create_output_tasks(capture_mode, image_files, folder_on_host, settings_mana
 
 ##############################################################################################  
 
-def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
-    """
-    This is the function that is run by the worker process in the pool. It starts the 
-    proxies (this has to be done in the process where the proxies are going to be 
-    used), processes the sub task and saves the output (both on the host and on the 
-    server).
-    """
-    try:
-        #start the proxies
-        settings_manager_proxy.start()
-        network_manager_proxy.start()
-        
-        #run the subtask execution function (this is what actually produces the output)
-        output = sub_task.execute(settings_manager_proxy)
-        
-        #save the output on the host
-        if output != None:
-            try:
-                output.save(sub_task.output_filename)
-            except AttributeError:
-                #this is added for compatibility with matplotlib figure objects
-                output.savefig(sub_task.output_filename)
-        
-        #copy the output to the server if required
-        if sub_task.file_on_server != None:
-            network_manager_proxy.copy_to_server(sub_task.output_filename, sub_task.file_on_server)
-        
-    except Exception, ex:
-        traceback.print_exc()
-        raise ex
-    
-    finally:
-        #shutdown the proxies
-        settings_manager_proxy.exit()
-        network_manager_proxy.exit()
+#def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
+#    """
+#    This is the function that is run by the worker process in the pool. It starts the 
+#    proxies (this has to be done in the process where the proxies are going to be 
+#    used), processes the sub task and saves the output (both on the host and on the 
+#    server).
+#    """
+#    try:
+#        #start the proxies
+#        settings_manager_proxy.start()
+#        network_manager_proxy.start()
+#        
+#        #run the subtask execution function (this is what actually produces the output)
+#        output = sub_task.execute(settings_manager_proxy)
+#        
+#        #save the output on the host
+#        if output != None:
+#            try:
+#                output.save(sub_task.output_filename)
+#            except AttributeError:
+#                #this is added for compatibility with matplotlib figure objects
+#                output.savefig(sub_task.output_filename)
+#        
+#        #copy the output to the server if required
+#        if sub_task.file_on_server != None:
+#            network_manager_proxy.copy_to_server(sub_task.output_filename, sub_task.file_on_server)
+#        
+#    except Exception, ex:
+#        traceback.print_exc()
+#        raise ex
+#    
+#    finally:
+#        #shutdown the proxies
+#        settings_manager_proxy.exit()
+#        network_manager_proxy.exit()
         
 ##############################################################################################          
         
@@ -96,12 +99,12 @@ class SubTask:
             settings_manager_proxy.start()
             network_manager_proxy.start()
         
-            #load the image
-            image = allskyImage.new(self.image[0],self.image[1])
+            #load the image using PASKIL
+            self.image = allskyImage.new(self.image[0],self.image[1])
             
             #work out where the output should be saved
             #get the capture time from the image header
-            capture_time_string = image.getInfo()['header']['Creation Time']
+            capture_time_string = self.image.getInfo()['header']['Creation Time']
             
             capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")
             
@@ -114,8 +117,11 @@ class SubTask:
             
         
             #run the subtask execution function (this is what actually produces the output)
-            output = self.function(image, self.output, settings_manager_proxy)
+            output = self.function(self.image, self.output, settings_manager_proxy)
             
+            #print "image ref count = ",gc.
+            #gc.collect()
+            #print "referents = ",gc.get_referrers(self.image)
             #save the output on the host
             if output != None:
                 try:
@@ -127,7 +133,8 @@ class SubTask:
             #copy the output to the server if required
             if self.file_on_server != None:
                 network_manager_proxy.copy_to_server(self.output_filename, self.file_on_server)
-        
+            del self.image
+            
         except Exception, ex:
             traceback.print_exc()
             raise ex
@@ -194,19 +201,27 @@ class OutputTask:
         while 0 < len(self._running_subtasks):
             self._running_subtasks[0].completed.wait()
             try:
-               self._running_subtasks[0].result()
+                self._running_subtasks[0].result()
             except:
-               self.__remove_files = False
-               self._settings_manager.set({'output':"outputTask> Error! Processing pool failed to execute one or more sub-tasks"})
-               self._settings_manager.set({'output':"outputTask> Leaving temporary files in place"})
+                self.__remove_files = False
+                self._settings_manager.set({'output':"OutputTask> Error! Processing pool failed to execute one or more sub-tasks"})
+                self._settings_manager.set({'output':"OutputTask> Leaving temporary files in place"})
+    
                
-            self._running_subtasks.pop(0)
+            st = self._running_subtasks.pop(0)
+            del st
+            #print "ref count = ",sys.getrefcount(st)
+            #print "referrers = ",gc.get_referrers(st)
+        gc.collect() #force garbage collection here
+        try:
+            multiprocessing.active_children() #reap zombie processes
+        except OSError:
+            pass #if there are any syncronisation problems then just give up - it's not that important
         self._running_subtasks_lock.release()
-            
+   
     ##############################################################################################    
     
     def remove_temp_files(self):
-        return
         if self.__remove_files:
             os.remove(self._image_file[0])
             os.remove(self._image_file[1]) 
