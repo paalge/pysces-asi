@@ -1,8 +1,12 @@
 import threading
-import multiprocessing
+import matplotlib
 
-import settings_manager,scheduler
-from multitask import ThreadQueueBase,ThreadTask
+#using the Agg backend prevents threading conflicts with the GTK based GUI, it also
+#allows the script to be started remotely
+matplotlib.use('Agg') 
+
+import settings_manager
+import scheduler
 
 
 class MainBox:
@@ -77,7 +81,6 @@ if __name__ == '__main__':
         print s["output"]
     
     main_box = MainBox()
-    #signal.signal(signal.SIGINT,main_box.exit)
     
     main_box.register("output",output,["output"])
     

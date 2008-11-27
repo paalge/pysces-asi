@@ -1,10 +1,8 @@
-import wx,time
+import wx
 from threading import Thread
 import threading
-import main
-import gc
 
-#gc.set_debug(gc.DEBUG_LEAK)
+import main
 
 #define event IDs for start and stop menu items in main frame
 ID_START = 102

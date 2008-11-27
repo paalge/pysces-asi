@@ -7,7 +7,6 @@ CPUs.
 """
 import multiprocessing
 import threading
-import sys,gc
 
 import network
 from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase

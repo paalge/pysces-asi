@@ -3,7 +3,6 @@ import datetime
 import threading
 import traceback
 import gc
-import sys
 import multiprocessing
 
 from outputs import TYPES
@@ -206,17 +205,18 @@ class OutputTask:
                 self.__remove_files = False
                 self._settings_manager.set({'output':"OutputTask> Error! Processing pool failed to execute one or more sub-tasks"})
                 self._settings_manager.set({'output':"OutputTask> Leaving temporary files in place"})
-    
-               
+       
             st = self._running_subtasks.pop(0)
             del st
-            #print "ref count = ",sys.getrefcount(st)
-            #print "referrers = ",gc.get_referrers(st)
-        gc.collect() #force garbage collection here
+        #force garbage collection here. This solves the memory leak problem
+        gc.collect()
+        
+        #reap zombie processes
         try:
-            multiprocessing.active_children() #reap zombie processes
+            multiprocessing.active_children() 
         except OSError:
             pass #if there are any syncronisation problems then just give up - it's not that important
+        
         self._running_subtasks_lock.release()
    
     ##############################################################################################    
