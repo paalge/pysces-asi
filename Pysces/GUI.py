@@ -14,7 +14,7 @@ class TerminalFrame(wx.TextCtrl):
     """
     Frame to display scrolling text in different colours.
     """
-    def __init__(self,parent_frame,history_length=250):
+    def __init__(self,parent_frame,history_length=1):
         self.history_length = history_length #number of lines that are stored by the terminal
         self.current_line_number = 0
         wx.TextCtrl.__init__(self,parent_frame,-1, style = wx.TE_MULTILINE)
@@ -55,6 +55,7 @@ class TerminalFrame(wx.TextCtrl):
         
         #print the text to the terminal window    
         self.SetDefaultStyle(wx.TextAttr(font_colour))
+        self.SetInsertionPointEnd()
         self.WriteText(s)
         self.current_line_number += 1
         if threading.currentThread() != self.gui_thread:

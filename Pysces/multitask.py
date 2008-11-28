@@ -331,7 +331,8 @@ class ProcessTask:
         except Exception, ex:
             self.return_queue.put(ex)
         
-        self.completed.set()
+        finally:
+            self.completed.set()
 
     ###########################################################################
         

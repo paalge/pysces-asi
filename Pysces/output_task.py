@@ -33,44 +33,6 @@ def create_output_tasks(capture_mode, image_files, folder_on_host, settings_mana
 
 ##############################################################################################  
 
-#def _process_subtask(sub_task, settings_manager_proxy, network_manager_proxy):
-#    """
-#    This is the function that is run by the worker process in the pool. It starts the 
-#    proxies (this has to be done in the process where the proxies are going to be 
-#    used), processes the sub task and saves the output (both on the host and on the 
-#    server).
-#    """
-#    try:
-#        #start the proxies
-#        settings_manager_proxy.start()
-#        network_manager_proxy.start()
-#        
-#        #run the subtask execution function (this is what actually produces the output)
-#        output = sub_task.execute(settings_manager_proxy)
-#        
-#        #save the output on the host
-#        if output != None:
-#            try:
-#                output.save(sub_task.output_filename)
-#            except AttributeError:
-#                #this is added for compatibility with matplotlib figure objects
-#                output.savefig(sub_task.output_filename)
-#        
-#        #copy the output to the server if required
-#        if sub_task.file_on_server != None:
-#            network_manager_proxy.copy_to_server(sub_task.output_filename, sub_task.file_on_server)
-#        
-#    except Exception, ex:
-#        traceback.print_exc()
-#        raise ex
-#    
-#    finally:
-#        #shutdown the proxies
-#        settings_manager_proxy.exit()
-#        network_manager_proxy.exit()
-        
-##############################################################################################          
-        
 class SubTask:
     """
     The subTask class is used to represent a single output that must be created for a particular

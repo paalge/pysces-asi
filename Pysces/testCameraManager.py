@@ -2,14 +2,14 @@ from __future__ import with_statement
 
 import time
 import random
-import cPickle
+#import cPickle
 import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
 
 from camera import CameraManagerBase, GphotoError
 
 class D80Simulator(CameraManagerBase):
     def __init__(self,settings_manager):
-        pass   
+        self.settings_manager =  settings_manager 
     def set_capture_mode(self,capture_mode):
         #print "Camera is being set to "+capture_mode.name
         #set camera configs based on capture mode settings
@@ -26,7 +26,8 @@ class D80Simulator(CameraManagerBase):
     
     def capture_images(self):
         print "capturing images"
-        time.sleep(5)
+#        self.settings_manager.set({'output':"CameraManager> Capturing Image"})
+        time.sleep(2)
         i = random.randint(0,20)
         if i==20:
             raise GphotoError, "Failed to capture image"

@@ -61,7 +61,7 @@ def centered_image(image, output, settings_manager):
 ##############################################################################################
 
 def realtime_keogram(image, output, settings_manager):
-    print "creating keogram!"
+    settings_manager.set({'output':"OutputTaskHandler> Creating keogram"})
     #see if a realtime keogram has been created yet
     try:
         filename = settings_manager.get(['user_rt_keo_name'])['user_rt_keo_name']

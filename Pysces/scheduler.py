@@ -137,7 +137,9 @@ class Scheduler:
             self.__capture_manager.exit()
         except AttributeError:
             pass
-
+        
+        self.__current_capture_mode_name = None
+        
     ##############################################################################################    
     
     def __create_observatory(self,glob_vars):

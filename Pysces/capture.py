@@ -8,7 +8,7 @@ OutputTaskHandler for processing.
 The CaptureManager also creates a HostManager object and uses this to update the
 folder structure on the host before each image is captured.
 """
-#import traceback
+import traceback
 import Queue
 import datetime
 import time
@@ -108,6 +108,7 @@ class CaptureManager(ThreadQueueBase):
                             i += 1
                         except Queue.Full:
                             #the outputTaskHandler is busy, wait for a bit and then retry
+                            print "waiting for output_task_handler"
                             time.sleep(1)                
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
