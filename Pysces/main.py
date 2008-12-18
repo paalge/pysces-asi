@@ -87,5 +87,7 @@ if __name__ == '__main__':
     #run!
     main_box.start()
     main_box._MainBox__capture_thread.join()
+    main_box.exit()
+
     
     
