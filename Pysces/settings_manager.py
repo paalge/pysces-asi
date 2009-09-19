@@ -193,7 +193,7 @@ class SettingsManager(ThreadQueueBase):
             
             #hard code settings file location and create a parser
             home = os.path.expanduser("~")
-            self.__settings_file_parser = settings_file_parser.SettingsFileParser(home+"/.Pysces/settings.txt")
+            self.__settings_file_parser = settings_file_parser.SettingsFileParser(home+"/.pysces_asi/settings.txt")
             
             #create an output variable - this is used instead of printing to stdout, making it easier
             #for a top layer application (e.g. a GUI) to access this data

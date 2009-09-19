@@ -112,9 +112,9 @@ class NetworkManager(ThreadQueueBase):
         #define method to string mappings - notice that these should be the thread safe public methods!
         self._methods = {"copyToServer":self.copy_to_server, "destroy proxy":self._commit_destroy_proxy}
         
-        #self._manager = Manager()
         self._remote_input_queue = multiprocessing.Queue()#self._manager.Queue()
         self._output_queues = {}
+        
         #create thread to handle remote tasks
         self.remote_task_thread = Thread(target = self._process_remote_tasks)
         self.remote_task_thread.start()

@@ -80,9 +80,6 @@ class SubTask:
             #run the subtask execution function (this is what actually produces the output)
             output = self.function(self.image, self.output, settings_manager_proxy)
             
-            #print "image ref count = ",gc.
-            #gc.collect()
-            #print "referents = ",gc.get_referrers(self.image)
             #save the output on the host
             if output != None:
                 try:

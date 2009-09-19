@@ -73,9 +73,9 @@ def realtime_keogram(image, output, settings_manager):
     if filename == None:
         
         #work out the start and end times for the keogram based on the setting in the settings file
-        end_time = None#datetime.datetime.utcnow()
+        end_time = datetime.datetime.utcnow()
         time_span = datetime.timedelta(hours = output.time_range)
-        start_time = None#end_time - time_span
+        start_time = end_time - time_span
              
         keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width, data_spacing=output.data_spacing)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
