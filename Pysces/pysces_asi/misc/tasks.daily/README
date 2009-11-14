@@ -1,0 +1,16 @@
+Any executable files placed in this folder will be run by pysces_asi each time 
+it creates a new output folder. The output folder structure is defined in the 
+HOST MACHINE SETTINGS section of the settings.txt file. By default, a new 
+folder is produced each day (at midnight UT), in which case executables in 
+this folder will be run daily (as the name suggests!). However, if you edit
+the settings file, such that a new folder is only produced once a month (for
+example by setting the day_folder_format to None) then the executables in this
+folder will only be run once a month.
+
+Each executable will be passed the full path of the previous output folder as
+a command line argument (in addition to it's own name as per usual), i.e. for
+a shell script, the folder path will be ${1} for a Python script it will be
+sys.argv[1] etc.
+
+The order in which the executables are run is arbitrary. 
+

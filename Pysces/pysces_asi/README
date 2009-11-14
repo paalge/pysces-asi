@@ -1,0 +1,88 @@
+        #############################################
+        #####            PYSCES_ASI             #####
+        #####               V.2.0               #####
+        ##### All-sky camera control for Linux! #####
+        #############################################
+
+Author: Nial Peters
+Date: September 2009
+Copyright (C): Nial Peters 2009
+
+
+                        ## LICENSE ##
+                        
+pysces_asi is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+pysces_asi is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+
+                      ## INSTALLATION ##
+                      
+Before installing pysces_asi you will need to install the following:
+
+    * The Python All-sky Image Library (PASKIL), see: 
+      http://code.google.com/p/paskil/
+      
+    * The PyEphem package, see: http://rhodesmill.org/pyephem/
+    
+    * wxPython, see: www.wxpython.org/
+    
+    * GPhoto2, see: http://gphoto.sourceforge.net/
+    
+If you are using a Python version less than 2.6, then you will also need
+to install a backport of the Python multiprocessing module. This can be
+obtained from http://code.google.com/p/python-multiprocessing/.
+
+IMPORTANT! - When installing matplotlib (which is a dependency of
+PASKIL), you must ensure that the "Agg" backend is available. Using
+matplotlib with a wx backend with pysces_asi seems to cause problems. 
+pysces_asi changes the matplotlib backend to "Agg" at the top of the 
+main.py file, but no checks are done to ensure it was successful.
+
+To install pysces_asi:
+        
+    1 - Unpack the archive: $ tar -xzf pysces_asi-2.0.tar.gz
+    
+    2 - Move to the unpacked folder: $ cd pysces_asi-2.0
+    
+    3 - Run the setup script. You will need root permissions to do this: 
+        $ python setup.py install
+        
+The setup script will install the pysces_asi module into the 
+site-packages directory of your Python distribution. It will also
+install an executable "pysces_asi" into (probably) /usr/bin. Finally,
+it will create a read/write folder for pysces_asi to use in your home
+folder called ".pysces_asi". The settings file that controls 
+pysces_asi's operation will be installed into this read/write folder
+and you should edit it before running the main program.
+
+
+                       ## USING PYSCES_ASI ##
+                       
+pysces_asi is controlled by editing the settings file, 
+"~/.pysces_asi/settings.txt". This file is well commented, and should
+be self explanatory. After completing the settings file simply run the
+command "pysces_asi" in a terminal. If all goes well, a graphical 
+window should appear. It is likely that you will see lots of 
+exception messages in the terminal window used to run pysces_asi. If 
+everything seems to be working ok, then you can ignore these as they
+are probably being handled internally. To start running the camera, 
+simply go to the capture menu and select "start capture". Depending 
+on your settings, a new window may open prompting you for passwords
+in order to mount your web-server.
+
+When closing pysces_asi, you should be aware that it may take some 
+time for the program to exit. However, if it takes more than 30s, 
+then there is probably something wrong!    
+    
+
+
+
+
+

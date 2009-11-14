@@ -1,0 +1,460 @@
+                     ##################################
+                     #### pysces_asi Settings File ####
+                     ##################################
+
+# This file controls the operation of pysces_asi. 
+# It should be edited WITH CARE!
+
+# WARNING!: Any changes made to variables in this file whilst pysces_asi is 
+# running will be lost when the program exits. Adding new declarations whilst 
+# pysces_asi is running will cause it to fail to update the file on program 
+# exit.
+
+# WARNING!: Don't name variables the same thing as their values. There is a bug
+# in the file parser that will mess up the file update if you do. For example,
+# True = True will cause problems.
+
+###############################################################################
+
+
+### FILE SYNTAX  ###
+
+# This is a comment
+	
+# Empty declarations are not allowed e.g. "name=" will cause an error.
+	
+# To include a # in a value it must be escaped using a \, 
+# e.g. name = "\#Some \# string".
+	
+# Values which are not meant to be strings, should not use quotation marks.
+
+# Values which are meant to be strings MUST use quotation marks.
+	
+# Values may include shell variables e.g. directory = "${HOME}". However, they 
+# may not be nested inside more complex data types e.g dirs = ["$HOME","/usr"] 
+# will NOT work!
+	
+# Declarations must be made inside a <type><end> block, allowed types are 
+# variables, output, schedule and capture mode.
+    
+# Where relevant, the expected data type for each setting has been included in 
+# parentheses in the trailing comment. Floating point numbers do not have to 
+# have a decimal point e.g. 150.0 may be entered as 150.
+    
+###############################################################################
+
+
+### HOST MACHINE SETTINGS ###
+
+#These variables control the file structure on the host machine
+<variables>
+	# This is the folder where the output folder structure will be built.
+	folder_on_host = "${HOME}" #(str)
+	
+	# This is the temporary folder where images from the camera will be 
+	# downloaded to before they are processed. Note that gphoto requires this 
+	# to be on a regular, local partition. Setting the tmp dir to be on a RAID 
+	# array or on a remote server may cause problems.
+    tmp dir = "${HOME}/tmp" #(str)
+    
+    # Setting safe_delete to True means that the images dowloaded from the 
+    # camera to the temporary folder will only be deleted if all the outputs
+    # are generated successfully. This ensures that images will never be lost,
+    # but also means that if one of the output tasks repetedly fails, then the
+    # temporary folder will gradually get filled up with images.
+    safe_delete = True #(bool)
+    
+    # The following arguments control the folder structure created.
+    # By default the following structure is created:
+ 
+    # folder_on_host
+    #	|_
+    #	  Year
+    #	    |_
+    #	      Month
+    #		   |_
+    #		     Day
+    
+    # The name format of the Year, Month and Day folders are determined by the 
+    # following variables. Setting the format to None will cause that folder
+    # to be skipped from the tree. The values may be combined 
+    # e.g. "%a%d" -> Mon25
+
+	# Year values are: "%Y" -> 2007
+	#		           "%y" -> 07
+	#		           None ->
+	year_folder_format = "%Y" #(str or None) 
+
+	# Month values are: "%m" -> 02
+	#		            "%b" -> Feb
+	#		            "%B" -> February
+	#		            None ->
+	month_folder_format = "%B" #(str or None) 
+
+	# Day values are: "%j" -> 363 (day of year)
+	#		          "%a" -> Mon
+	#		          "%A" -> Monday
+	#		          "%d" -> 25 (day of month)
+	#		          None ->
+	day_folder_format = "%d" #(str or None) 
+<end>
+
+###############################################################################
+
+
+### OBSERVATORY INFORMATION ###
+
+# These settings are used to calculate sun and moon angles, and also to
+# process the images.
+<variables>
+    # Name of the observatory where the camera is based.
+	observatory_name =  #(str)
+	
+	# Latitude of observatory in decimal number of degrees - must be entered as
+	# a string e.g. "78.148"
+	latitude =  #(str)
+	
+	# Longitude of observatory in decimal number of degrees - must be entered 
+	# as a string e.g. "16.043"
+	longitude = #(str)
+	
+	# Height in meters above sea level of observatory
+	altitude = #(float)
+	
+	# Bearing (from geographic North) of geomagnetic North
+	magnetic_bearing = #(float)	
+<end>
+
+###############################################################################
+
+
+### CAMERA INFORMATION ###
+
+# These settings are used by PASKIL to process the captured images
+<variables>
+    # The type of lens used on the camera. Currently supported options are: 
+    # "equisolidangle" and "equidistant"
+	lens_projection =  #(str)
+	
+	# The angle from the zenith to the edge of the field of view (<=90)
+	fov_angle =  #(float)
+	
+	# The bearing (from geographic north towards geographic east) of the top of 
+	# the image. Remember that the camera points upwards, so the image will be 
+	# in a NWSE orientation not NESW!
+	camera_rotation =  #(float) 	
+<end>
+
+
+# Declare the different types of images the camera can record. You should have 
+# one entry here for each type of image you want to use. Each image type 
+# should be enclosed in its own <image><end> block.
+<image>
+    # Unique identifier for this image type e.g. "jpeg". This is used to 
+    # identify this image type in the output declarations further down this 
+    # file.
+	image_type =  #(str)
+	
+	# The position of the center of the field of view (in pixels from the top 
+	# of the image).
+	y_center =  #(int)
+	
+	# The position of the center of the field of view (in pixels from the left
+	# of the image).
+	x_center =  #(int)
+	
+	# The radius (in pixels) of the field of view.
+	Radius =  #(int)
+	
+	# Wavelength of image e.g "RGB" or "6300", this is used to classify images
+	# into PASKIL datasets - see PASKIL docs.
+	Wavelength =  #(str)
+<end>
+
+# Next image type declaration
+<image>
+	image_type = #(str)
+	y_center = #(int)
+	x_center = #(int)
+	Radius = #(int)
+	Wavelength = #(str)
+<end>
+
+###############################################################################
+
+
+## WEB SERVER SETTINGS ##
+
+# pysces_asi can copy the outputs it generates to a web server. It mounts the 
+# web server locally using mount.cifs and then copies the required files as it 
+# processes them. If you don't want output copied to a web-server set all of 
+# these to None.
+<variables>
+    # Server location e.g. "//webserver.mycompany.mycountry/web$", this can 
+    # probably be an IP too, but that is untested! 
+	web_server =  #(str or None)
+	
+	# Folder on the server where files should be put e.g. "dslr/quicklooks".  
+	web_dir = #(str or None)
+	
+	# Your username on the server.
+	web_username =  #(str or None)
+<end>
+
+###############################################################################
+
+
+## CAPTURE MODE DEFINITIONS ##
+
+# pysces_asi uses the concept of capture modes to distinguish between different 
+# modes of camera and processing operation. Each capture mode defines a set of 
+# camera settings to be used and a set of outputs to be produced while the 
+# capture mode is being executed. For example, it may be desirable to operate a
+# camera 24hrs a day. In which case you will want a different exposure time for
+# daytime operation than for nighttime operation. You may also only want 
+# nighttime images to be included in an output keogram. In this case, you would
+# define two capture modes, one for daytime and one for nighttime, specifying 
+# the different exposure times and only including keogram generation in the 
+# nighttime outputs. The scheduling of capture mode execution is done further 
+# down this file in the SCHEDULe DEFINITION section. Each different capture 
+# mode must be defined in its own <capture mode><end> block.
+<capture mode>
+    # A unique idetifier for this capture mode e.g. "Night Time". This is used 
+    # to identify this capture mode in the schedule definition.
+	name = #(str)
+	
+	## Capture settings
+	
+	# Delay between consecutive image capture. Note that this is the minimum
+	# delay and that the actual delay may be longer depending on data transfer
+	# speed from the camera, processing time etc. The delay is in seconds.
+	delay = #(int)
+	
+	## Camera settings. 
+	
+	# Here you can set any settings on the camera that gphoto2 will allow. You
+	# can get a list of possibilities by using the gphoto2 --list-config 
+	# command. Possible values for each config can be found using the 
+	# --get-config command. Configs should be set to their descriptive value,
+	# not their index value e.g. iso = "1600", NOT iso = "1". All config values
+	# should be entered as strings. You should be aware that setting configs 
+	# with gphoto2 does not always result in them changing on the camera itself.
+	# Config values are dependent on the control settings on the camera itself,
+	# and some cameras just do not let you set some configs using gphoto2.
+	# Furthermore, the gphoto2 --get-config command may report a config as
+	# having been changed when it has not. The only "safe" way to check is to
+	# look at the image exif data. Also note that exposure times are often 
+	# measured in tenths of seconds so exptime="150" isn't as stupid as it 
+	# might seem!
+	#
+	# So, as an example, this section might look something like the below:
+	# iso = "1600"
+	# f-number = "f/2.8"
+	# exptime = "150"
+	# imgsize = "3872x2592"
+	# whitebalance = "Shade"
+	# focusmode = "Manual"
+	
+	# List of outputs that you want produced for this capture mode. The names 
+	# should relate to outputs that are specified further down this file. This
+	# should be a list of strings e.g. outputs = ["keo", "full size png"]
+	outputs = #(list of str)
+<end>
+
+# Next capture mode definition
+<capture mode>
+	name = #(str)
+	delay = #(str)
+	
+    #camera configs#
+
+	outputs = #(list of str)
+<end>
+
+###############################################################################
+
+
+## SCHEDULE DEFINITION ##
+
+# The schedule is defined by a set of test="capture mode" statements. The 
+# "capture mode" argument should be a string defining the name of the desired 
+# capture mode. The test argument should also should take the form of a logic 
+# test (as would be used in a Python if statement).
+
+# The test may be constructed using standard test constructs such as >, <, >=, 
+# <=, ==, and, or, not. It must not contain the assignment operator (=), this 
+# is not a test! Additionally, it may contain the following key words:
+#	 DATE
+#	 TIME
+#	 SUN_ANGLE (the angle in degrees of the sun above the horizon).
+#	 MOON_ANGLE (the angle in degrees of the moon above the horizon).
+#	 MOON_PHASE (the percentage phase of the moon, 0 = new moon)
+
+# The macros Date("dd/mm/yy") and Time("hh:mm:ss") are also defined and can be 
+# used to test the values of DATE and TIME e.g. "DATE < Date("02/02/09")" will 
+# evaluate to true until the 2nd Feb 2009.
+
+<schedule>
+# For example a schedule for day and night capture might look something like:
+#	TIME > Time("05:00:00") and TIME < Time("17:00:00") = "Day Time"
+#	TIME > Time("17:00:00") and TIME < Time("05:00:00") = "Night Time"
+#
+# Or we could use sun angle, in which case:
+#   SUN_ANGLE < -10 = "Night Time"
+#   SUN_ANGLE > -10 = "Day Time"	
+<end>
+
+###############################################################################
+
+
+## OUTPUT DEFINITIONS ##
+
+# Each output that is required must be defined here. If you want the same 
+# output to be produced for two or more image types, then you must define the 
+# output once for each image type. Each output definition is split into two 
+# parts, the required fields (which must be defined) and the user set fields 
+# (which can be anything, or nothing depending on the output). To make sense of
+# this section you need to understand how pysces_asi produces its outputs. The 
+# easiest way to do that is to follow an example, so, say we want pysces_asi to
+# produce quicklooks image from a jpeg image type that we have defined above...
+
+# The code that produces the outputs is contained in the outputs.py file which 
+# is installed as part of pysces_asi (probably in 
+# /usr/lib/python?.?/site-packages/pysces_asi. The first step to producing 
+# our quicklooks is to write a function that can actually process the image 
+# into a quicklook. So we open the outputs.py file and add our function, lets 
+# call it create_quicklook. The function must take three arguments, an 
+# allskyImage object (see the PASKIL documentation for details), an OutputType 
+# (see pysces_asi/data_storage_classes.py)  object and a SettingsManager object
+# (see pysces_asi/settings_manager.py). Our function might look something 
+# like this:
+#
+#   def create_quicklook(image, output, settings_manager):   
+#       im = image.binaryMask(output.fov_angle)
+#       im = im.centerImage()
+#       im = im.alignNorth(north="geomagnetic", orientation='NWSE')
+#       ql = im.createQuicklook()
+#       return ql
+#
+# The next step is to register our function with pysces_asi. At the bottom of 
+# the outputs.py file there is a variable called TYPES that is defined. To 
+# register our function we must add it to this variable. We come up with a name
+# for this type of output, lets say "qlook" and then we add it to the TYPES 
+# dictionary {.....,"qlook":create_quicklook,....}.
+#
+# There are a few key things to notice about the function definition above. The
+# return type in this case is an allskyImage object, however, it can be any 
+# object that has a save(filename) or save_fig(filename) method. Alternatively 
+# it may be None, in which case pysces_asi will not make any attempt to save 
+# it! Also notice that we have passed output.fov_angle as an argument to 
+# PASKIL's binaryMask function. This is an example of how the user set fields 
+# in the output definition (in this file) can be used. All fields defined in 
+# the output definition are available to the processing function as attributes
+# of the OutputType object passed to it. This allows user-defined functions 
+# easy access to the settings in this file. Output parameters can then be 
+# changed easily without editing the source code.
+#
+# Use of the SettingsManager object in your own functions should be done with 
+# care! It allows users to define global variables which will be available to 
+# all functions every time they are called. It can also be used to store 
+# variables persistantly (i.e. their value will be reloaded automatically if 
+# the program is re-started). It can also be abused to modify any of the 
+# settings in this file. Unless you know what you are doing, it is probably 
+# best to leave it alone! See the settings_manager.py file to find out how to 
+# use it.
+#
+# The final stage of creating our quicklooks is to add the output definition to
+# this file as shown below, and then to include this output type (we've called 
+# it "ql" below) to one of the capture modes.
+#
+# Each output must be defined in its own <output><end> block.
+
+
+<output>
+	## Required fields
+	
+	# A unique identifier for this output type, in our example it would be: 
+	# name = "ql"
+	name = #(str)
+	
+	# The type of this output, as defined in the outputs.py file, in our 
+	# example it would be: type = "qlook"
+	type = #(str)
+	
+	# The type of image we want processed as this output. This should be one of
+	# the image types declared higher up in this file, in our example: 
+	# image_type = "jpeg"
+	image_type = #(str)
+	
+	# The sub-folder where this output should be put. This is in addition to 
+	# the directory tree that is specified in the HOST MACHINE SETTINGS section
+	# of this file. In our example we might use folder_on_host="quicklooks" in 
+	# which case the output would be put in the folder 
+	# $HOME/year/month/day/quicklooks. Setting this to None will result in the
+	# output being stored in the folder specified by the HOST MACHINE SETTINGS
+	# section of this file. If you don not want the output stored on the host
+	# machine at all, then you must also set the filename_format (below) to 
+	# None.
+	folder_on_host = #(str or None)
+	
+	# The name of the file this output should be copied to on the web-server. 
+	# This can be set to None if there is no web-server or if you do not want 
+	# this output copied to it.
+	file_on_server = #(str or None)
+	
+	# The format of the filename you want used when saving this output. This 
+	# can include any of the format descriptors allowed by Python's time 
+	# module. For example, you can use any of those used in the HOST MACHINE 
+	# SETTINGS section and the following are also allowed:
+        # "%H" -> 22 (Hour)
+        # "%M" -> 15 (Minute)
+        # "%S" -> 45 (second)
+    # For full details see the documentation for the Python time module.
+    # In our example, we might choose something like "ql_%y%m%d_%H%M%S.png". 
+    # The filename extension given here must be one supported by the 
+    # save/save_fig method of the object returned by the processing function.
+    # If you do not want the output stored on the host machine (for example, 
+    # if you only want it copied to a web server) then set the filename_format
+    # and the folder_on_host (above) to None.	
+	filename_format = #(str or None)
+	
+	# Whether these outputs must be processed in the same order that the images
+	# are taken. In our example we can set this to False and take advantage of 
+	# pysces-asi's parallel processing capabilities (it doesn't really matter 
+	# if we process quicklooks in a different order to that which they are 
+	# taken). However, if we were producing a keogram, then we should set it to
+	# True, since the images should be added to the keogram in the order in 
+	# which they are taken. You should be aware that it is extremely unlikely 
+	# that images will be processed out of order even if this is set to False -
+	# it is not impossible though!
+	pipelined = #(bool)
+	
+	# That is all the required fields. Any other variables you want to access 
+	# from the output processing function for this output can be defined here. 
+	# In our example, we would also define the field of view that we want our 
+	# quicklooks cropped to: fov_angle = 75
+<end>
+
+# Next output type definition.
+<output>
+	# Required fields
+	name = #(str)
+	type = #(str)
+	image_type = #(str)
+	folder_on_host = #(str)
+	file_on_server = #(str or None)
+	filename_format = #(str)
+	pipelined = #(bool)
+	
+	# User defined fields
+<end>
+
+# If you made it this far, then well done! Hopefully everything will go 
+# smoothly from here. Remember, take a few test shots and check the exif 
+# to make sure it is doing what you think it is doing. Disable functions such 
+# as auto-iso on the camera as these can screw-up your config settings without
+# you noticing. Most importantly, remember to take the lens cap off! 
+# Happy snapping!
+
+###############################################################################
+

@@ -1,0 +1,6 @@
+Any executables placed in this folder will be run when pysces_asi first starts.
+The program will wait for the completion of all executables before it 
+continues. However, it will continue regardless of whether the executables 
+completed successfully or not.
+
+The order in which executables placed in this folder are run is arbitrary.
