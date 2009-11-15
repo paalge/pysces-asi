@@ -23,7 +23,7 @@ from __future__ import with_statement
 import cPickle
 import Image
 
-from PASKIL import allskyImage, allskyImagePlugins
+from PASKIL import allskyImage, allskyImagePlugins,misc
 
 
 class Pysces_DSLR_LYR_JPG:
@@ -68,7 +68,13 @@ class Pysces_DSLR_LYR_JPG:
         
         with open(info_filename,"rb") as fp:
                 info = cPickle.load(fp)
-     
+        
+        #attempt to load the exif data
+        try:
+            info['exif'] = misc.readExifData(image_filename)
+        except:
+            pass
+        
         #return new allskyImage object
         return allskyImage.allskyImage(image,image.filename,info)
         
