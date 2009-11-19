@@ -53,6 +53,15 @@ class CronManager(ThreadQueueBase):
             #self.image_scripts_dir = home+"/.pysces_asi/tasks.per_image"
             self.daily_scripts_dir = home+"/.pysces_asi/tasks.daily"
             
+            #it is possible that the "output folder" variable doesn't exist
+            #yet (normally it is created when the HostManager is instanciated.
+            #so just in case, we create it here - otherwise we might have problems
+            #when we try to register a callback for it
+            try:
+                self._settings_manager.create("output folder", "")
+            except ValueError:
+                pass
+            
             #register the callback for the daily scripts
             self._settings_manager.register("output folder",self.run_daily_tasks,["output folder","cron_folder_to_process"])
                         
