@@ -233,9 +233,11 @@ class SettingsManager(ThreadQueueBase):
         
         except Exception, ex:
             #if an exception occurs then we need to shut down the threads and manager before exiting
-            ThreadQueueBase.exit(self)
+            self._stay_alive = False
             self._remote_input_queue.put(None)
             self.remote_task_thread.join()
+            self._remote_input_queue.close()
+            ThreadQueueBase.exit(self)
             raise ex
                
     ##############################################################################################
