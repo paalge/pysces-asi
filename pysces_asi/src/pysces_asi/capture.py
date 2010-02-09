@@ -61,6 +61,7 @@ class CaptureManager(ThreadQueueBase):
 
         except Exception, ex:
             traceback.print_exc()
+            self._settings_manager.set({"output":"CameraManager> ** ERROR! **  "+ex.message})
             self.exit()
             raise ex
 

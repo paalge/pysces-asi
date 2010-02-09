@@ -18,8 +18,11 @@
 The host module provides a HostManager class responsible for maintaining the 
 folder structure on the host machine.
 """
+from __future__ import with_statement
 import os
 import datetime
+import time
+import threading
 
 class HostManager:
     """
@@ -46,6 +49,7 @@ class HostManager:
         The structure changes between CaptureModes since they may require different 
         outputs. It also changes with time, as the day, month, year folders change.
         """
+        
         #get required global variables
         glob_vars = self.__settings_manager.get(["folder_on_host", "year_folder_format", "month_folder_format", "day_folder_format", "tmp dir"])
 
@@ -68,7 +72,13 @@ class HostManager:
             
         #see if it exists and if not then create it
         if not os.path.exists(current_folder):
-            os.makedirs(current_folder)     
+            try:
+               os.makedirs(current_folder)
+            except OSError:
+            #for some reason the  check
+            #sometimes fails resulting in an OSError when we try to create the folder.
+            #Maybe due to network latency or something? 
+                pass 
 
         #create sub_directories for the different outputs
         output_folders = set([])
@@ -85,14 +95,20 @@ class HostManager:
                     continue
                 
                 if not os.path.exists(os.path.normpath(current_folder + "/" + sub_folder)):
-                    os.mkdir(os.path.normpath(current_folder + "/" + sub_folder))
-           
+                    try:
+                        os.mkdir(os.path.normpath(current_folder + "/" + sub_folder))
+                    except OSError:
+                        pass
         #update output folder variable
         self.__settings_manager.set({"output folder":current_folder})
         
         #create tmp dir if it doesn't exist already
         if not os.path.exists(glob_vars['tmp dir']):
-            os.makedirs(glob_vars['tmp dir'])
+            try:
+                os.makedirs(glob_vars['tmp dir'])
+            except OSError:
+                pass
+        
             
     ##############################################################################################                     
 ##############################################################################################    

@@ -124,7 +124,8 @@ class NetworkManager(ThreadQueueBase):
         self._mount_point = home+"/.pysces_asi/servers/web"
         
         #create the mount point folder if it doesn't already exist
-        os.makedirs(self._mount_point)
+        if not os.path.isdir(self._mount_point):
+            os.makedirs(self._mount_point)
         
         ThreadQueueBase.__init__(self,name="NetworkManager")
         

@@ -30,7 +30,7 @@ class TerminalFrame(wx.TextCtrl):
     """
     Frame to display scrolling text in different colours.
     """
-    def __init__(self,parent_frame,history_length=1):
+    def __init__(self,parent_frame,history_length=50):
         self.history_length = history_length #number of lines that are stored by the terminal
         self.current_line_number = 0
         wx.TextCtrl.__init__(self,parent_frame,-1, style = wx.TE_MULTILINE)
@@ -82,7 +82,7 @@ class TerminalFrame(wx.TextCtrl):
     
 class MainFrame(wx.Frame):
     """
-    Main viewing window (or frame) containing the terminal and control buttons.
+    Main viewing window (or frame) containing the terminal and control menu.
     """
     def __init__(self):
         #create main frame
