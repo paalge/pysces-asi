@@ -132,6 +132,12 @@
 
 # These settings are used by PASKIL to process the captured images
 <variables>
+    # The plugin to use to operate the camera. This should correspond to the 
+    # name of a plugin in the .pysces_asi/cameras folder (where name is the 
+    # value used for name in the call to the register() function in the 
+    # plugin, not the name of the file).
+    camera = #(str)
+    
     # The type of lens used on the camera. Currently supported options are: 
     # "equisolidangle" and "equidistant"
 	lens_projection =  #(str)

@@ -21,8 +21,8 @@ D80 camera.
 from __future__ import with_statement
 import cPickle
 
-import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
-from camera import GphotoCameraManager
+from pysces_asi import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
+from pysces_asi.camera import GphotoCameraManager, register
 
 ##############################################################################################  
 
@@ -184,4 +184,6 @@ class D80CameraManager(GphotoCameraManager):
         return info
     
     ##############################################################################################             
-############################################################################################## 
+##############################################################################################
+
+register("D80", D80CameraManager) 

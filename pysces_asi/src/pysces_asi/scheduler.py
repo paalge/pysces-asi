@@ -55,6 +55,13 @@ def Date(date_string):
 
 ##############################################################################################
 
+class FutureSchedule:
+    def __init__(self):
+        self.times = []
+        self.sun_angles = []
+        self.moon_angles = []
+        self.capture_modes = {}
+
 class Scheduler:
     """
     The scheduler class is responsible for selecting the correct capture mode. The
@@ -74,6 +81,28 @@ class Scheduler:
         self.__running = False
         self.__current_capture_mode_name = None
         self.__capture_manager = None
+        
+        #create ephemeris data variables
+        try:
+            self.__settings_manager.create("sun_angle","")
+        except ValueError:
+            pass
+        try:
+            self.__settings_manager.create("moon_angle","")
+        except ValueError:
+            pass
+        try:
+            self.__settings_manager.create("moon_phase","")
+        except ValueError:
+            pass
+        try:
+            self.__settings_manager.create("current_capture_mode","")
+        except ValueError:
+            pass
+        try:
+            self.__settings_manager.create("future_schedule",FutureSchedule())
+        except ValueError:
+            pass
         
         #create an pyephem observer object for calculating sun and moon angles
         self.__create_observatory(self.__settings_manager.get(["latitude","longitude","altitude"]))
@@ -105,6 +134,8 @@ class Scheduler:
             
             self.__settings_manager.set({"output":"Scheduler> Waiting....."})
             
+            last_future_prediction = datetime.datetime.utcnow() - datetime.timedelta(seconds=31)
+            
             #work out which capture mode should be running now
             while self.__running:
                 
@@ -131,16 +162,47 @@ class Scheduler:
     
                         #pass capture mode to captureManager
                         self.__capture_manager.commit_task(capture_mode_to_run)
-                        self.__settings_manager.set({"output":"Scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode"})
+                        self.__settings_manager.set({"output":"Scheduler> Starting \""+capture_mode_to_run_name+"\" capture mode","current_capture_mode":capture_mode_to_run_name})
                     
                         self.__current_capture_mode_name = capture_mode_to_run_name
+                
+                #every 30 seconds - predict the future
+                if last_future_prediction + datetime.timedelta(seconds=30) < datetime.datetime.utcnow():
+                    self.predict_future()
+                    last_future_prediction = datetime.datetime.utcnow()
                 
                 #wait for a short while before re-evaluating the schedule
                 time.sleep(5)
         finally:
             self.exit()
     ##############################################################################################          
-      
+    
+    def predict_future(self):
+        """
+        Evaluates ephemiris and schedule for the next 12 hours and stores the data
+        into the settings_manager (GUI display is then updated via a callback)
+        """
+        time_now = datetime.datetime.utcnow()
+        end_time = time_now + datetime.timedelta(hours=24)
+        
+        future = FutureSchedule()
+        
+        current_time = time_now
+        increment = datetime.timedelta(seconds=30)
+        
+        while current_time <= end_time:
+            future.times.append(current_time)
+            self.__observatory.date = current_time.strftime("%Y/%m/%d %H:%M:%S")
+            self.__sun.compute(self.__observatory)
+            self.__moon.compute(self.__observatory)
+            future.sun_angles.append(math.degrees(self.__sun.alt))
+            future.moon_angles.append(math.degrees(self.__moon.alt))
+            current_time += increment
+        
+        self.__settings_manager.set({'future_schedule':future})
+    
+    ##############################################################################################               
+    
     def exit(self):
         """
         Terminates the CaptureManager and returns
@@ -194,6 +256,9 @@ class Scheduler:
         SUN_ANGLE = math.degrees(self.__sun.alt)
         MOON_ANGLE = math.degrees(self.__moon.alt)
         MOON_PHASE = float(self.__moon.moon_phase * 100.0)
+        
+        #set the values stored in the settings manager
+        self.__settings_manager.set({"sun_angle":SUN_ANGLE,"moon_angle":MOON_ANGLE,"moon_phase":MOON_PHASE})
         
         #get the schedule from the global variables
         schedule = self.__settings_manager.get(["schedule"])["schedule"]

@@ -65,6 +65,7 @@ class MainBox:
             self.__capture_thread.join()
 
             self.__capture_thread = None
+            self.__settings_manager.set({"output":"MainBox> Capture stopped."})
     
     ##############################################################################################     
               

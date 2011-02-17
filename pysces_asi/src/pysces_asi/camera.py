@@ -25,9 +25,46 @@ from ThreadQueueBase, ensuring that only one thread accesses the camera at a tim
 """
 import datetime
 import time
+import glob 
+import os.path
+import imp
 from subprocess import Popen, PIPE
 
+
 from multitask import ThreadQueueBase, ThreadTask
+
+
+cameras = {} #dict to hold all camera plugins
+
+
+def register(name, plugin):
+    """
+    Registers a camera plugin, each plugin should call this function when it
+    is imported. The plugin argument should be a sub-class of CameraManagerBase.
+    The name argument should correspond to the name used in the settings file.
+    """
+    if globals()['cameras'].has_key(name):
+        raise ValueError, "A plugin called \'"+name+"\' already exists."
+    
+    globals()['cameras'][name] = plugin
+
+
+def load_camera_plugins(cameras_folder):
+    """
+    Imports all the files in .pysces_asi/cameras, causing all the plugins
+    to be registered.
+    """
+    #get list of plugin files
+    plugins = glob.glob(cameras_folder+"/*.py")
+    
+    for p in plugins:
+        imp.load_source(os.path.basename(p).rstrip(".py"), p)
+
+def clear_plugins_list():
+    """
+    Clears the plugin dict.
+    """
+    globals()['cameras'] = {}
 
 
 class GphotoError(Exception):
@@ -398,6 +435,7 @@ class GphotoCameraManager(CameraManagerBase):
             #skip blank lines
             if config.isspace() or config == "":
                 continue
+            
             
             #get short name of config
             split = config.split("/")

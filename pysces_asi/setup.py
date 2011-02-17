@@ -37,6 +37,10 @@ except ImportError:
 home_folder = os.path.expandvars("$HOME")
 pysces_rw_folder = os.path.normpath(home_folder+'/.pysces_asi')
 
+#get list of camera plugins
+camera_files = ["misc/cameras/"+i for i in os.listdir("misc/cameras")]
+
+
 setup(name='pysces_asi',
       version='2.0',
       description='All-sky camera control script', 
@@ -48,7 +52,8 @@ setup(name='pysces_asi',
       scripts=['misc/pysces_asi'],
       data_files=[(pysces_rw_folder, ['misc/template_settings.txt']),
                   (pysces_rw_folder+"/tasks.daily",["misc/tasks.daily/README"]),
-                  (pysces_rw_folder+"/tasks.startup",["misc/tasks.startup/README"])]
+                  (pysces_rw_folder+"/tasks.startup",["misc/tasks.startup/README"]),
+                  (pysces_rw_folder+"/cameras",camera_files)]
       )
 
 #since we install as root then the rw_folder is created with root as the owner

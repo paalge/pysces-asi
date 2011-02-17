@@ -28,19 +28,16 @@ import traceback
 import Queue
 import datetime
 import time
+import os
 
 import host
 import output_task_handler
-
-#to use a different camera manager class, change this line to import
-#your camera manager as CameraManager.
-from D80 import D80CameraManager as CameraManager
 
 from multitask import ThreadQueueBase, ThreadTask
 from data_storage_classes import CaptureMode
 from output_task import create_output_tasks
 from camera import GphotoError
-#from testCameraManager import D80Simulator as CameraManager
+import camera
 
 ##############################################################################################  
 
@@ -56,7 +53,14 @@ class CaptureManager(ThreadQueueBase):
         try:
             self._settings_manager = settings_manager
             self._host_manager = host.HostManager(settings_manager)
-            self._camera_manager = CameraManager(settings_manager)
+            
+            #get the correct plugin for the camera
+            home = os.path.expanduser("~")
+            cameras_folder = home + "/.pysces_asi/cameras"           
+            camera_plugin_name = self._settings_manager.get(["camera"])['camera']
+            camera.load_camera_plugins(cameras_folder)          
+            self._camera_manager = camera.cameras[camera_plugin_name](settings_manager)
+            
             self._output_task_handler = output_task_handler.OutputTaskHandler(settings_manager)
 
         except Exception, ex:
@@ -168,6 +172,9 @@ class CaptureManager(ThreadQueueBase):
         """
         #kill own worker thread
         ThreadQueueBase.exit(self)
+        
+        #clear the plugins list
+        camera.clear_plugins_list()
         
         try:
             self._camera_manager.exit()

@@ -23,7 +23,6 @@ documentation for the operate() method for an example of what not to do!
 """
 import os
 import multiprocessing
-from multiprocessing import Manager
 from threading import Thread
 
 import persist 
@@ -223,7 +222,7 @@ class SettingsManager(ThreadQueueBase):
                 self.__create(key, settings[key])
                         
             #create persistant storage class
-            self.__persistant_storage = persist.PersistantStorage(home+"/.Pysces", self)
+            self.__persistant_storage = persist.PersistantStorage(home+"/.pysces_asi", self)
             
             #load persistant values into variables
             persistant_data = self.__persistant_storage.get_persistant_data()
@@ -271,7 +270,7 @@ class SettingsManager(ThreadQueueBase):
         #create task
         task = self.create_task(self.__create, name, value, persistant=persistant)
         
-         #submit task
+        #submit task
         self.commit_task(task)
         
         #return result when task has been completed
@@ -388,7 +387,7 @@ class SettingsManager(ThreadQueueBase):
         [42]
         >>> s.exit()
         
-        
+        Note that callback functions for the variable are still called.
         """
           
         #create task
@@ -488,7 +487,7 @@ class SettingsManager(ThreadQueueBase):
         #create task
         task = self.create_task(self.__unregister, id_)
         
-         #submit task
+        #submit task
         self.commit_task(task)
         
         #return result when task has been completed
@@ -508,7 +507,7 @@ class SettingsManager(ThreadQueueBase):
         #create task
         task = self.create_task(self._create_proxy)
         
-         #submit task
+        #submit task
         self.commit_task(task)
         
         #return result when task has been completed
@@ -542,7 +541,7 @@ class SettingsManager(ThreadQueueBase):
         #create task
         task = self.create_task(self._destroy_proxy, id_)
         
-         #submit task
+        #submit task
         self.commit_task(task)
         
         #return result when task has been completed
@@ -693,4 +692,3 @@ class SettingsManager(ThreadQueueBase):
            
     ##############################################################################################     
 ##############################################################################################           
-           
