@@ -21,8 +21,6 @@ folder structure on the host machine.
 from __future__ import with_statement
 import os
 import datetime
-import time
-import threading
 
 class HostManager:
     """
@@ -73,7 +71,7 @@ class HostManager:
         #see if it exists and if not then create it
         if not os.path.exists(current_folder):
             try:
-               os.makedirs(current_folder)
+                os.makedirs(current_folder)
             except OSError:
             #for some reason the  check
             #sometimes fails resulting in an OSError when we try to create the folder.
@@ -86,6 +84,9 @@ class HostManager:
         #look at which folders are needed in the outputs for this capture mode
         if capture_mode != None:
             for output in capture_mode.outputs:
+                #skip absolute paths
+                if hasattr(output,"abs_path_on_host") and output.abs_path_on_host:
+                    continue
                 output_folders.add(output.folder_on_host)
             
             #create the folders

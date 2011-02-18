@@ -84,20 +84,27 @@ class CameraManagerBase(ThreadQueueBase):
     they exit in order to kill the internal worker thread. See the docs
     on the methods themselves for details of what they have to do.
     """
-    def __init__(self):
+    def __init__(self, settings_manager):
         ThreadQueueBase.__init__(self,name="CameraManager")
         
         try:
             #check that camera is connected
             if not self.is_connected():
                 raise GphotoError, "No camera detected"
+            
+            if settings_manager.get(['camera_full_auto_clear'])['camera_full_auto_clear']:
+                settings_manager.set({"output":"CameraManager> Clearing camera card"})
         
             #get the camera configs
+            settings_manager.set({"output":"CameraManager> Downloading settings from camera - please wait"})
+
             self.camera_configs = self.download_configs()
             self.capture_mode = None
         except Exception, ex:
             self.exit()
             raise ex
+        
+
     
     ############################################################################################## 
                 
@@ -125,6 +132,18 @@ class CameraManagerBase(ThreadQueueBase):
         #return result when task has been completed
         return task.result()
     
+    ############################################################################################## 
+    
+    def clear_camera(self):
+        #create task
+        task = ThreadTask(self._clear_camera)
+        
+        #submit task
+        self.commit_task(task)
+        
+        #return result when task has been completed
+        return task.result()
+        
     ############################################################################################## 
         
     def get_camera_configs(self):
@@ -188,7 +207,16 @@ class CameraManagerBase(ThreadQueueBase):
         (see the PASKIL.allskyImagePlugins module for details).
         """
         raise AttributeError, "CameraManagerBase must be sub-classed"
-      
+    
+    ############################################################################################## 
+    
+    def _clear_camera(self):
+        """
+        This method should clear all images from the camera. If it is not possible with
+        your camera, then it should just return without error.
+        """
+        raise AttributeError, "CameraManagerBase must be sub-classed"
+             
     ############################################################################################## 
 
     def _is_connected(self):
@@ -217,13 +245,44 @@ class GphotoCameraManager(CameraManagerBase):
     """
     
     def __init__(self, settings_manager):
-        self._settings_manager = settings_manager
-        
-        self._settings_manager.set({"output":"CameraManager> Downloading settings from camera - please wait"})
-        
-        CameraManagerBase.__init__(self)       
+        self._settings_manager = settings_manager        
+        CameraManagerBase.__init__(self, settings_manager)       
                
     ############################################################################################## 
+    
+    def _clear_camera(self):
+        #get a list of the folders on the camera
+        p = Popen("gphoto2 -l", shell=True, stdout=PIPE)       
+        p.wait()
+        if p.returncode != 0:
+            raise GphotoError, "Gphoto2 Error: Unable to download the list of folders"
+        
+        #read output lines from pipe
+        lines = p.stdout.readlines()
+    
+        #get the current and possible values for all the different configs
+        for folder in lines:
+            folder = folder.lstrip().rstrip()
+            #skip blank lines
+            if folder.isspace() or folder == "":
+                continue
+            #skip lines not describing folders
+            if not folder.startswith("There"):
+                continue
+            
+            #skip root folder and special folder
+            if folder.endswith(["\'/\'.","\'/special\'."]):
+                continue
+            
+            #skip empty folders
+            if folder.startswith("There is no file"):
+                continue
+            
+            #get folder name from string
+            folder = folder.partition("\'")[2].rstrip("\'.")
+            
+            self._delete_photos(folder)
+
     
     def _set_config(self, name, value):
         """
@@ -235,7 +294,10 @@ class GphotoCameraManager(CameraManagerBase):
         
         #convert the descriptive value to its index value using the list of 
         #camera configs
-        config = self.camera_configs[name]        
+        try:
+            config = self.camera_configs[name]
+        except KeyError:
+            raise GphotoError, "\'"+name+"\'"+" is not a valid config name for this camera. (Although it is possible that it was simply not downloaded from the camera during initialisation). Use \'gphoto2 --list-config\' to check that the requested config actually exists."      
         value_index = config.values[value]
         
         #run gphoto function in separate process
@@ -403,10 +465,10 @@ class GphotoCameraManager(CameraManagerBase):
         settings file and the time of capture. This method should take the values
         returned by the _take_photo method as its arguments.
         """
-        glob_vars = self._settings_manager.get(['tmp dir', 'filename_format'])
+        glob_vars = self._settings_manager.get(['tmp dir'])
         
         self._settings_manager.set({"output": "CameraManager> Downloading image(s)"})
-        p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime(glob_vars['filename_format'])+".%C\"", shell=True)
+        p = Popen("gphoto2 -P --folder="+folder_on_camera+" --filename=\""+glob_vars['tmp dir']+"/"+time_of_capture.strftime("%Y%m%d_%H%M%S")+".%C\"", shell=True)
         p.wait()
         if p.returncode != 0:
             raise GphotoError, "Gphoto2 Error: Unable to copy the photos from the camera card"
@@ -503,7 +565,7 @@ class GphotoCameraManager(CameraManagerBase):
 
         return CameraConfig(label, current, values)
     
-     ##############################################################################################
+    ##############################################################################################
 ##############################################################################################
 
 class CameraConfig:

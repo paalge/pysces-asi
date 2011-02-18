@@ -19,6 +19,7 @@ This module defines three classes used for passing settings stored in the
 settings file around within the program. This is more convenient than using
 nested dicts.
 """
+import os
 
 class CaptureMode:
     """
@@ -40,6 +41,8 @@ class CaptureMode:
                 self.name = value
             elif name == "delay":
                 self.delay = value
+            elif name == "top_of_min":
+                self.top_of_min = value
             elif name == "outputs":
                 for output_name in value:
                     self.outputs.append(OutputType(output_type_settings[output_name], image_type_settings))
@@ -79,20 +82,23 @@ class OutputType:
     
     def __init__(self, output_type_settings, image_type_settings):
         self.__output_type_settings = output_type_settings
-        self.name = output_type_settings["name"]
-        self.type = output_type_settings["type"]
+#        self.name = output_type_settings["name"]
+#        self.type = output_type_settings["type"]
         self.image_type = ImageType(image_type_settings[output_type_settings["image_type"]])
-        self.folder_on_host = output_type_settings["folder_on_host"]
-        self.file_on_server = output_type_settings["file_on_server"]
-        self.filename_format = output_type_settings["filename_format"]
-        self.pipelined = output_type_settings["pipelined"]
+#        self.folder_on_host = output_type_settings["folder_on_host"]
+#        self.file_on_server = output_type_settings["file_on_server"]
+#        self.filename_format = output_type_settings["filename_format"]
+#        self.pipelined = output_type_settings["pipelined"]
         
     def __getattr__(self, name):
         #any additional attributes that are defined in the settings file can be 
         #recovered using this method.
         try:
-            return self.__output_type_settings[name]
+            if type(self.__output_type_settings[name]) is str:
+                return os.path.expandvars(self.__output_type_settings[name])
+            else:
+                return self.__output_type_settings[name]
         except KeyError:
-            raise AttributeError, "outputType instance has no attribute called " + name + ". Check that it has been defined in the settings file"
+            raise AttributeError, "OutputType instance has no attribute called " + name + ". Check that it has been defined in the settings file"
 
 ##############################################################################################  

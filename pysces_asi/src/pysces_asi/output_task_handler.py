@@ -25,8 +25,9 @@ import multiprocessing
 import threading
 
 import network
-from multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
-from output_task import OutputTask
+from pysces_asi.multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
+from pysces_asi.output_task import OutputTask
+from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
 
 ##############################################################################################  
 
@@ -93,18 +94,24 @@ class OutputTaskHandler(ThreadQueueBase):
             #OutputTask object, and we need to be able to excute it.
             if isinstance(output_task, ThreadTask):
                 self.__pipelined_lock.release()
-                print "recieved exit command"
+                print "output task handler: recieved exit command"
                 output_task.execute()
                 self._task_queue.task_done()
                 
             elif isinstance(output_task, OutputTask):
                     
+                #submit the image file for cron processing
+                submit_image_for_cron(output_task.get_image_filename(), self._settings_manager)
+
                 #run all the sub tasks in separate processes
                 output_task.run_subtasks(self._processing_pool, self._pipelined_processing_pool, self._network_manager)
                 self.__pipelined_lock.release()
                 
                 #wait for all the subtasks to be executed
                 output_task.wait()
+                
+                #wait for the CronManager to finish with the image files
+                wait_for_per_image_tasks(output_task.get_image_filename(),self._settings_manager)
                 
                 #remove the temporary files
                 output_task.remove_temp_files()
@@ -142,7 +149,7 @@ class OutputTaskHandler(ThreadQueueBase):
                 raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
         
         if self._stay_alive:
-            self._task_queue.put(task)
+            self._task_queue.put_nowait(task)
                    
     ##############################################################################################              
      

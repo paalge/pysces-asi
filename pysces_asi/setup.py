@@ -11,6 +11,7 @@ should be edited before pysces_asi is run.
 from distutils.core import setup
 import sys
 import os.path
+import glob
 
 # Check that all the prerequisite packages are installed
 try:
@@ -38,7 +39,7 @@ home_folder = os.path.expandvars("$HOME")
 pysces_rw_folder = os.path.normpath(home_folder+'/.pysces_asi')
 
 #get list of camera plugins
-camera_files = ["misc/cameras/"+i for i in os.listdir("misc/cameras")]
+camera_files = ["misc/cameras/"+os.path.basename(i) for i in glob.glob("misc/cameras/*.py")]
 
 
 setup(name='pysces_asi',
@@ -53,6 +54,7 @@ setup(name='pysces_asi',
       data_files=[(pysces_rw_folder, ['misc/template_settings.txt']),
                   (pysces_rw_folder+"/tasks.daily",["misc/tasks.daily/README"]),
                   (pysces_rw_folder+"/tasks.startup",["misc/tasks.startup/README"]),
+                  (pysces_rw_folder+"/tasks.per_image",["misc/tasks.per_image/README"]),
                   (pysces_rw_folder+"/cameras",camera_files)]
       )
 
@@ -65,5 +67,14 @@ if sys.argv.count('install') != 0:
    
     if return_code != 0:
         print "Error! Failed to change ownership of \"~/.pysces_asi\""
+    
+    #we also need to double check that the README files don't get executable bits set - otherwise
+    #the CronManager will get confused!
+    print "Checking that README files have not been made executable"
+    for f in [os.path.normpath(pysces_rw_folder+"/tasks.daily/README"), os.path.normpath(pysces_rw_folder+"/tasks.startup/README"),
+              os.path.normpath(pysces_rw_folder+"/tasks.per_image/README")]:
+        return_code = os.system("chmod -x "+f)
+        if return_code != 0:
+            print "Error! Failed to change execute permissions on \'"+f+"\'"        
 
       

@@ -96,7 +96,7 @@ class Scheduler:
         except ValueError:
             pass
         try:
-            self.__settings_manager.create("current_capture_mode","")
+            self.__settings_manager.create("current_capture_mode",None)
         except ValueError:
             pass
         try:
@@ -144,7 +144,7 @@ class Scheduler:
                             
                 if capture_mode_to_run_name != self.__current_capture_mode_name:
                     #the capture mode has changed and should be updated               
-                    if capture_mode_to_run_name == None:
+                    if capture_mode_to_run_name is None:
                         #no capture mode should be running - pass this information to the captureManager
                         self.__capture_manager.commit_task(None)
                         

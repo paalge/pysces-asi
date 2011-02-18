@@ -26,7 +26,6 @@ and executed sequentially. Parallelisation: by setting the number of workers to
 import time
 import traceback
 import multiprocessing
-import datetime
 
 from Queue import Queue
 from threading import Event, Thread, currentThread
@@ -77,10 +76,7 @@ class ThreadTask:
         except Exception, self._exception:
             print "\nException in thread: ", currentThread()
             traceback.print_exc()
-       # except Exception, self._exception:
-       #     pass
-
-    
+ 
         #set the event to true, to show that the task is finished
         self.completed.set()
 
@@ -164,7 +160,7 @@ class ThreadQueueBase:
                 raise RuntimeError, "### Error! ### Worker thread in "+self.name+ " has died!"
         
         if self._stay_alive:
-            self._task_queue.put(task)
+            self._task_queue.put_nowait(task)
 
     ###########################################################################
        
@@ -342,8 +338,8 @@ class ProcessTask:
             self.return_queue.put(self._function(*self._args, 
                                                          **self._kwargs))
        
-       #catch any exceptions that were raised during execution so that they can
-       #be raised in the calling thread, rather than the internal worker thread 
+        #catch any exceptions that were raised during execution so that they can
+        #be raised in the calling thread, rather than the internal worker thread 
         except Exception, ex:
             self.return_queue.put(ex)
         

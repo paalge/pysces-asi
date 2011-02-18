@@ -23,11 +23,6 @@ import matplotlib
 
 import main
 
-#define event IDs for start and stop menu items in main frame
-ID_START = 1002
-ID_STOP = 1003
-
-
 class PlotPanel (wx.Panel):
     """
     PlotPanel class taken from http://www.scipy.org/Matplotlib_figure_in_a_wx_panel
@@ -149,7 +144,7 @@ class CaptureModePanel(wx.Panel):
         wx.Panel.__init__(self,parent,-1)
         self.vsizer=wx.BoxSizer(wx.VERTICAL)
         #self.title = wx.StaticText(self,wx.ID_ANY,"Ephemeris:")
-        self.caption = wx.StaticText(self,wx.ID_ANY,"\n\tCurrent capture mode: None")
+        self.caption = wx.StaticText(self,wx.ID_ANY,"\n\tCurrent capture mode: \'None\'")
         
         #self.vsizer.Add(self.title,0,wx.ALIGN_LEFT)
         self.vsizer.Add(self.caption,0,wx.ALIGN_LEFT)
@@ -161,12 +156,12 @@ class CaptureModePanel(wx.Panel):
     
     def update(self,data):
         wx.MutexGuiEnter()
-        self.caption.SetLabel("\n\tCurrent capture mode: \""+str(data["current_capture_mode"])+"\"")
+        self.caption.SetLabel("\n\tCurrent capture mode: \'"+str(data["current_capture_mode"])+"\'")
         wx.MutexGuiLeave()
     
     def blank(self):
         #method only called by GUI thread, therefore no need to get Mutex
-        self.caption.SetLabel("\n\tCurrent capture mode: None")
+        self.caption.SetLabel("\n\tCurrent capture mode: \'None\'")
 
             
 class EphemPanel(wx.Panel):
@@ -232,10 +227,6 @@ class StatusPanel(wx.Panel):
     def exit(self):
         self.time_panel.exit()
     
-    def update_ephem(self,variables):
-        self.ephem_panel.update_ephem(variables)
-        self.capture_mode_panel.update(variables)
-    
     def blank(self):
         
         self.ephem_panel.blank()
@@ -248,7 +239,10 @@ class TerminalFrame(wx.TextCtrl):
     """
     Frame to display scrolling text in different colours.
     """
-    def __init__(self,parent_frame,history_length=50):
+    def __init__(self,parent_frame, history_length=50, show_time=False, show_date=False):
+        self.show_time = show_time
+        self.show_date = show_date
+        
         self.history_length = history_length #number of lines that are stored by the terminal
         self.current_line_number = 0
         wx.TextCtrl.__init__(self,parent_frame,-1, style = wx.TE_MULTILINE)
@@ -287,6 +281,12 @@ class TerminalFrame(wx.TextCtrl):
             self.Remove(0, length+1)
             self.current_line_number -= 1
         
+        #add date and time information if required
+        if self.show_time:
+            s = datetime.datetime.utcnow().strftime("%H:%M:%S ")+s
+        if self.show_date:
+            s = datetime.datetime.utcnow().strftime("%d/%m/%y ")+s
+        
         #print the text to the terminal window    
         self.SetDefaultStyle(wx.TextAttr(font_colour))
         self.SetInsertionPointEnd()
@@ -298,8 +298,12 @@ class TerminalFrame(wx.TextCtrl):
     ###############################################################################        
     
     def on_show_time(self,e):
-        print "hello world!"
-        print e
+        self.show_time = e.Checked()
+             
+    ###############################################################################
+        
+    def on_show_date(self,e):
+        self.show_date = e.Checked()
              
     ###############################################################################
 ###############################################################################
@@ -312,7 +316,23 @@ class MainFrame(wx.Frame):
         #create main frame
         wx.Frame.__init__(self, None, wx.NewId(), 'pysces_asi: All-sky Camera Control for Linux',size=(800, 500))
         
-        self.tw = TerminalFrame(self)
+        
+        #create the main pysces objects
+        self.pysces = main.MainBox()
+        
+        #create terminal frame settings if they don't already exist
+        try:
+            self.pysces.create("gui_term_viewtime", False, persistant=True)
+        except ValueError:
+            pass #it already exists
+        try:
+            self.pysces.create("gui_term_viewdate", False, persistant=True)
+        except ValueError:
+            pass #it already exists       
+            
+        term_settings = self.pysces.getVar(["gui_term_viewtime","gui_term_viewdate"])
+        
+        self.tw = TerminalFrame(self, show_time=term_settings["gui_term_viewtime"],show_date=term_settings["gui_term_viewdate"])
         self.tw.SetEditable(False)
         
         self.status_panel = StatusPanel(self)
@@ -330,19 +350,16 @@ class MainFrame(wx.Frame):
         
         self.SetSize((800,500))
         
-        #create the main pysces objects
-        self.pysces = main.MainBox()
-        
         #register the output 
         self.pysces.register('output', self.print_pysces_to_term, ['output'])
         
         #register the status callbacks
-        self.pysces.register('sun_angle', self.status_panel.update_ephem, ['sun_angle','moon_angle','moon_phase','current_capture_mode'])
-        
+        self.pysces.register('sun_angle', self.status_panel.ephem_panel.update_ephem, ['sun_angle','moon_angle','moon_phase'])
+        self.pysces.register('current_capture_mode', self.status_panel.capture_mode_panel.update, ['current_capture_mode'])
         #register for future schedule callbacks
         #self.pysces.register('future_schedule',self.schedule_panel.on_redraw,['future_schedule'])
         
-        #create the menubar
+        #create capture menu
         capture_menu = wx.Menu()
         self.menuStart = capture_menu.Append(-1, "&Start Capture",
                     "Run the capture program defined in the settings file.")
@@ -350,25 +367,29 @@ class MainFrame(wx.Frame):
         self.menuStop = capture_menu.Append(-1, "&End Capture", "Stop the capture program")
         self.menuStop.Enable(False)
         
+        #register capture menu callbacks
+        wx.EVT_MENU(self, self.menuStart.GetId(), self.start_pysces)
+        wx.EVT_MENU(self, self.menuStop.GetId(), self.stop_pysces)    
+        
+        
+        #create View menu
         view_menu = wx.Menu()
         terminal_view_submenu = wx.Menu()
-        terminal_view_submenu.AppendCheckItem(2000, "Time")
-        terminal_view_submenu.AppendCheckItem(2001, "Date")
+        term_showtime_checkbox = terminal_view_submenu.AppendCheckItem( -1, "Time")
+        term_showdate_checkbox = terminal_view_submenu.AppendCheckItem( -1, "Date")
+        term_showtime_checkbox.Check(self.tw.show_time)
+        term_showdate_checkbox.Check(self.tw.show_date)
+        wx.EVT_MENU(self,term_showtime_checkbox.GetId(), self.tw.on_show_time)
+        wx.EVT_MENU(self,term_showdate_checkbox.GetId(), self.tw.on_show_date)       
         view_menu.AppendSubMenu(terminal_view_submenu,"Terminal")
         
+        #create the menubar
         menuBar = wx.MenuBar()
         menuBar.Append(capture_menu, "&Capture")
         menuBar.Append(view_menu, "&View")
 
         self.SetMenuBar(menuBar)
-        
-        #bind menu events to methods
-        wx.EVT_MENU(self, self.menuStart.GetId(), self.start_pysces)
-        wx.EVT_MENU(self, self.menuStop.GetId(), self.stop_pysces)
-        
-        #bind checkbox events to methods
-        wx.EVT_CHECKBOX(self, 2000, self.tw.on_show_time)
-        
+     
         self.cleanup_thread = Thread(target=self.on_close)
         wx.EVT_CLOSE(self, self.exit)
         
@@ -413,6 +434,8 @@ class MainFrame(wx.Frame):
     ###############################################################################
     
     def on_close(self):
+        self.pysces.setVar({"gui_term_viewtime":self.tw.show_time,
+                         "gui_term_viewdate":self.tw.show_date})
         self.pysces.exit()
         wx.MutexGuiEnter()
         self.status_panel.exit()

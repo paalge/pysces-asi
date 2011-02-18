@@ -65,7 +65,7 @@ class CaptureManager(ThreadQueueBase):
 
         except Exception, ex:
             traceback.print_exc()
-            self._settings_manager.set({"output":"CameraManager> ** ERROR! **  "+ex.message})
+            self._settings_manager.set({"output":"CameraManager> ** ERROR! **  "+ex.args[0]})
             self.exit()
             raise ex
 
@@ -81,7 +81,11 @@ class CaptureManager(ThreadQueueBase):
         this.
         """
         #pull the first capture mode out of the queue
-        capture_mode = self._task_queue.get()   
+        capture_mode = self._task_queue.get()
+        
+        top_of_min_wait = False
+        if hasattr(capture_mode,"top_of_min"):
+            top_of_min_wait = capture_mode.top_of_min 
         
         while self._stay_alive or (not self._task_queue.empty()):
             
@@ -102,7 +106,7 @@ class CaptureManager(ThreadQueueBase):
                 try:
                     #set the camera settings to those required by the capture mode
                     self._camera_manager.set_capture_mode(capture_mode)
-                    
+                        
                     #record the time before we try to take an image
                     start_time = datetime.datetime.utcnow()
                     
@@ -112,24 +116,35 @@ class CaptureManager(ThreadQueueBase):
                     #get the current folder on the host
                     folder_on_host = self._settings_manager.get(["output folder"])["output folder"]
                     
+                    if top_of_min_wait:
+                        now = datetime.datetime.utcnow()
+                        wait = now.replace(minute=now.minute+1, second=0, microsecond=0) - now
+                        self._settings_manager.set({"output": "CaptureManager> Waiting "+str(wait.seconds)+"s for top of minute."})
+                        time.sleep(wait.seconds + wait.microseconds/1000000.0)
+                        start_time = datetime.datetime.utcnow()
+                    
                     #capture images and produce output tasks
                     images = self._camera_manager.capture_images()
                 
-                except GphotoError: #RuntimeError is rasied when gphoto fails in the cameraManager
-                    self._settings_manager.set({"output": "CaptureManager> Error! Failed to capture/download image."})
+                except GphotoError,ex: #RuntimeError is rasied when gphoto fails in the cameraManager
+                    self._settings_manager.set({"output": "CaptureManager> "+ex.args[0]})
                     images = None
+                    start_time = datetime.datetime.utcnow()
                 
-                if images != None:
+                if images is not None:
                     #create an outputTask obejct for each image type and pass them to the ouputTaskHandler
                     output_tasks = create_output_tasks(capture_mode, images, folder_on_host, self._settings_manager)
                     i = 0
+                    flag = True
                     while i < len(output_tasks):
                         try:
                             self._output_task_handler.commit_task(output_tasks[i])
                             i += 1
                         except Queue.Full:
                             #the outputTaskHandler is busy, wait for a bit and then retry
-                            print "waiting for output_task_handler"
+                            if flag:
+                                self._settings_manager.set({"output": "CaptureManager> Waiting for OutputTaskHandler"})
+                                flag = False
                             time.sleep(1)                
             
                 #wait remaining delay time, unless a new capture mode comes into the queue
@@ -145,9 +160,12 @@ class CaptureManager(ThreadQueueBase):
                     
                     capture_mode = self._task_queue.get(timeout=remaining_delay_time)
                     self._task_queue.task_done()
+                    if hasattr(capture_mode,"top_of_min"):
+                        top_of_min_wait = capture_mode.top_of_min 
                     continue
                 except Queue.Empty:
                     #no new capture modes have come in, so we just continue with the one we have got
+                    top_of_min_wait = False
                     continue
             
             else:

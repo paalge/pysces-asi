@@ -23,9 +23,37 @@ output folder is generated on the host (e.g. for running daily processing tasks)
 import traceback
 import os
 import subprocess
+import threading
 
 from multitask import ThreadQueueBase
 
+def remove_from_dict(d,k):
+    d.pop(k)
+    return d
+
+def add_to_dict(d,k,v):
+    d[k] = v
+    return d
+
+def wait_for_per_image_tasks(filename, settings_manager):
+    """
+    Function blocks until all pending per_image tasks have been completed on 
+    the image specified by filename.
+    """
+
+    lock_dict = settings_manager.get(["cron_per_image_locks"])["cron_per_image_locks"]
+    
+    lock_dict[filename].acquire()
+    
+    settings_manager.operate("cron_per_image_locks", remove_from_dict, filename)
+
+    
+def submit_image_for_cron(filename, settings_manager):
+    lock = threading.Lock()
+    lock.acquire()   
+    settings_manager.operate("cron_per_image_locks", add_to_dict, filename, lock)
+    settings_manager.set({"cron_image_to_process":filename})
+    
 
 class CronManager(ThreadQueueBase):
     """
@@ -37,7 +65,8 @@ class CronManager(ThreadQueueBase):
     with the settings_manager.
     """
     def __init__(self, settings_manager):
-        ThreadQueueBase.__init__(self,workers=1,name="CronManager")
+        ThreadQueueBase.__init__(self,workers=3,name="CronManager")
+        #need multiple worker threads to allow per_image jobs to run while daily tasks are running.
         
         try:
             self._settings_manager = settings_manager
@@ -46,11 +75,15 @@ class CronManager(ThreadQueueBase):
                 self._settings_manager.create("cron_folder_to_process",None,persistant=True)
             except ValueError:
                 pass
+            try:
+                self._settings_manager.create("cron_per_image_locks",{})
+            except ValueError:
+                pass
                                     
             home = os.path.expanduser("~")
             
             self.init_scripts_dir = home+"/.pysces_asi/tasks.startup"
-            #self.image_scripts_dir = home+"/.pysces_asi/tasks.per_image"
+            self.per_image_scripts_dir = home+"/.pysces_asi/tasks.per_image"
             self.daily_scripts_dir = home+"/.pysces_asi/tasks.daily"
             
             #it is possible that the "output folder" variable doesn't exist
@@ -62,8 +95,14 @@ class CronManager(ThreadQueueBase):
             except ValueError:
                 pass
             
+            try:
+                self._settings_manager.create("cron_image_to_process", "")
+            except ValueError:
+                pass
+            
             #register the callback for the daily scripts
             self._settings_manager.register("output folder",self.run_daily_tasks,["output folder","cron_folder_to_process"])
+            self._settings_manager.register("cron_image_to_process",self.run_per_image_tasks,["cron_image_to_process"])
                         
         except Exception, ex:
             traceback.print_exc()
@@ -110,8 +149,19 @@ class CronManager(ThreadQueueBase):
         elif old_output_folder == new_output_folder:
             return
         else:        
-            self._settings_manager.set({"cron_folder_to_process":new_output_folder})
+            self._settings_manager.set({"cron_folder_to_process":new_output_folder, "output": "CronManager> Running daily tasks for "+old_output_folder})
             self.__run_scripts(self.daily_scripts_dir,script_args="\""+old_output_folder+"\"")
+
+    ##############################################################################################
+    
+    def __run_per_image_tasks(self, arg_dict):
+        #get the name of the image to process
+        filename = arg_dict["cron_image_to_process"]
+              
+        self._settings_manager.set({"output": "CronManager> Running per-image tasks for "+filename})
+        self.__run_scripts(self.per_image_scripts_dir,script_args="\""+filename+"\"")
+        lock = self._settings_manager.get(["cron_per_image_locks"])["cron_per_image_locks"][filename]
+        lock.release()
 
     ##############################################################################################
     
@@ -120,7 +170,14 @@ class CronManager(ThreadQueueBase):
         
         #run the scripts one by one
         for script in scripts_list:
-            p = subprocess.Popen(script+" "+script_args, shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            not_started=True
+            while not_started:
+                try:
+                    p = subprocess.Popen(script+" "+script_args, shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    not_started=False
+                except OSError:
+                    continue
+                
             p.wait()
             print p.stdout.read()
             
@@ -167,16 +224,16 @@ class CronManager(ThreadQueueBase):
         return 
         
     ##############################################################################################
-    #TODO:
-#    def run_image_tasks(self, arg_dict):
-#        #create task
-#        task = self.create_task(self.__run_image_tasks, arg_dict)
-#        
-#        #submit task
-#        self.commit_task(task)
-#        
-#        #return result when task has been completed
-#        return task.result()
+    
+    def run_per_image_tasks(self, arg_dict):
+        #create task
+        task = self.create_task(self.__run_per_image_tasks, arg_dict)
+        
+        #submit task
+        self.commit_task(task)
+        
+        #return result when task has been completed
+        return 
         
     ##############################################################################################
    

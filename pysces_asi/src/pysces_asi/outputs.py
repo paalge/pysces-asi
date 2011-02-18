@@ -84,16 +84,15 @@ def realtime_keogram(image, output, settings_manager):
     except KeyError:
         filename = None
     image = image.resize((500, 500))
-    image = image.binaryMask(output.fov_angle)
     
-    if filename == None:
+    if filename is None or not os.path.exists(filename):
         
         #work out the start and end times for the keogram based on the setting in the settings file
         end_time = datetime.datetime.utcnow()
         time_span = datetime.timedelta(hours = output.time_range)
         start_time = end_time - time_span
              
-        keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width, data_spacing=output.data_spacing)      
+        keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width, data_spacing=output.data_spacing, keo_fov_angle=output.fov_angle)      
         keo.save(os.path.expanduser('~')+"/realtime_keogram")
         
         settings_manager.create('user_rt_keo_name', os.path.expanduser('~')+"/realtime_keogram", persistant=True)
@@ -102,7 +101,6 @@ def realtime_keogram(image, output, settings_manager):
         keo = allskyKeo.load(filename)
         keo = keo.roll([image])
         keo.save(filename)
-    print "submitted to allskyPlot"
 
     return allskyPlot.plot([keo], size=(9, 3.7))
 

@@ -91,7 +91,12 @@ class MainBox:
         
     def register(self,name,callback,globals_):
         self.__settings_manager.register(name,callback,globals_)
-           
+        
+    ############################################################################################## 
+     
+    def create(self, name, value, persistant=False):      
+        self.__settings_manager.create(name, value, persistant=persistant)
+         
     ############################################################################################## 
        
     def getVar(self,names):

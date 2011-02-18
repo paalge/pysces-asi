@@ -183,7 +183,7 @@ class SettingsFileParser:
         #open current settings file for reading
         with open(self.filename,'r') as fp:
         
-           #open temporary file to write to
+            #open temporary file to write to
             with open(self.filename + "-temp",'w') as ofp:
                 
                 #read file line by line

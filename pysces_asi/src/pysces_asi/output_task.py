@@ -88,11 +88,20 @@ class SubTask:
                 capture_time = datetime.datetime.strptime(capture_time_string, "%d %b %Y %H:%M:%S %Z")     
                 filename = capture_time.strftime(self.output.filename_format)
             
-                if self.output.folder_on_host != "" and self.output.folder_on_host != None:
-                    self.output_filename = os.path.normpath(self._folder_on_host + "/" + self.output.folder_on_host + "/" + filename)
+                if hasattr(self.output,"abs_path_on_host") and self.output.abs_path_on_host:
+                    
+                    if not os.path.exists(os.path.normpath(self.output.folder_on_host)):    
+                        try:
+                            os.makedirs(os.path.normpath(self.output.folder_on_host))
+                        except OSError:
+                            pass                        
+                    self.output_filename = os.path.normpath(self.output.folder_on_host + "/" + filename)
                 else:
-                    self.output_filename = os.path.normpath(self._folder_on_host + "/" + filename)
-            
+                    if self.output.folder_on_host != "" and self.output.folder_on_host != None:
+                        self.output_filename = os.path.normpath(self._folder_on_host + "/" + self.output.folder_on_host + "/" + filename)
+                    else:
+                        self.output_filename = os.path.normpath(self._folder_on_host + "/" + filename)
+                
             elif ((self.output.filename_format is None) and (self.file_on_server is not None)):
                 # the case where we only want the file copied to the server
                 temp_folder = settings_manager_proxy.get(['tmp dir'])['tmp dir']
@@ -155,6 +164,9 @@ class OutputTask:
         self.__remove_files = True
                  
     ##############################################################################################  
+    
+    def get_image_filename(self):
+        return self._image_file[0]
     
     def run_subtasks(self, processing_pool, pipelined_processing_pool, network_manager):
         """

@@ -16,7 +16,7 @@
 #along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
 """
 The D80 module provides a single camera manager class for controlling a Nikon
-D80 camera.
+D90 camera.
 """
 from __future__ import with_statement
 import cPickle
@@ -26,9 +26,9 @@ from pysces_asi.camera import GphotoCameraManager, register
 
 ##############################################################################################  
 
-class D80CameraManager(GphotoCameraManager):
+class D90CameraManager(GphotoCameraManager):
     """
-    Class for controlling a Nikon D80 camera. 
+    Class for controlling a Nikon D90 camera. 
     """
     def __init__(self, settings_manager):
         GphotoCameraManager.__init__(self, settings_manager)
@@ -52,7 +52,7 @@ class D80CameraManager(GphotoCameraManager):
             if self.camera_configs[name].current != value:
                 self._set_config(name, value)
 
-        #work out what the imgquality config should be set to based on the image types in the outputs
+        #work out what the imagequality config should be set to based on the image types in the outputs
         files=[]
         for output in capture_mode.outputs:
             files.append(output.image_type.image_type)
@@ -67,14 +67,14 @@ class D80CameraManager(GphotoCameraManager):
             get_jpeg = True
         
         if get_jpeg and get_raw:
-            if self.camera_configs["imgquality"].current != "NEF+Normal":
-                self._set_config("imgquality", "NEF+Normal")
+            if self.camera_configs["imagequality"].current != "NEF+Normal":
+                self._set_config("imagequality", "NEF+Normal")
         elif get_raw:
-            if self.camera_configs["imgquality"].current != "NEF (Raw)":
-                self._set_config("imgquality", "NEF (Raw)")
+            if self.camera_configs["imagequality"].current != "NEF (Raw)":
+                self._set_config("imagequality", "NEF (Raw)")
         else:
-            if self.camera_configs["imgquality"].current != "JPEG Normal":
-                self._set_config("imgquality", "JPEG Normal")
+            if self.camera_configs["imagequality"].current != "JPEG Normal":
+                self._set_config("imagequality", "JPEG Normal")
         
         self.capture_mode = capture_mode
         
@@ -93,11 +93,11 @@ class D80CameraManager(GphotoCameraManager):
         number_of_images = 0
         
         #see if we need to download a raw file
-        if self.camera_configs["imgquality"].current.count("NEF") != 0:
+        if self.camera_configs["imagequality"].current.count("NEF") != 0:
             get_raw = True
             number_of_images += 1
             
-        if self.camera_configs["imgquality"].current.count("Normal") != 0:
+        if self.camera_configs["imagequality"].current.count("Normal") != 0:
             get_jpeg = True
             number_of_images += 1 
                 
@@ -177,6 +177,5 @@ class D80CameraManager(GphotoCameraManager):
         return info
     
     ##############################################################################################             
-##############################################################################################
-
-register("D80", D80CameraManager) 
+############################################################################################## 
+register("D90", D90CameraManager) 
