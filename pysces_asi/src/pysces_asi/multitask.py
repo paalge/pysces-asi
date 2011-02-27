@@ -169,12 +169,18 @@ class ThreadQueueBase:
         Waits for all remaining tasks in the input queue to finish and then
         kills the worker threads.
         """
-        #submit one exit task for each thread 
-        for i in xrange(len(self._workers)):
+        num_alive = 0
+        for t in self._workers:
+            if t.is_alive():
+                num_alive+=1
+        
+        #submit one exit task for each thread that is still alive
+        while num_alive > 0:
             task = self.create_task(self._exit)
             self._task_queue.put(task)
             self._exit_event.wait()
             self._exit_event.clear()
+            num_alive -=1
         
         #block until outstanding tasks have been completed
         for thread in self._workers:

@@ -8,11 +8,13 @@ import cPickle
 from pysces_asi import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
 
 from pysces_asi.camera import CameraManagerBase, GphotoError, register
+from pysces_asi.data_storage_classes import CaptureMode
 
 class CameraSimulator(CameraManagerBase):
     def __init__(self,settings_manager):
-        CameraManagerBase.__init__(self, settings_manager)
         self.settings_manager =  settings_manager
+        CameraManagerBase.__init__(self, settings_manager)
+        
         
            
     def set_capture_mode(self,capture_mode):
@@ -94,6 +96,25 @@ class CameraSimulator(CameraManagerBase):
      
     ##############################################################################################
     def _download_configs(self):
+        
+        
+        current_configs = {}
+        
+        needed_configs = ['capturetarget', 'imagequality']
+        
+        #get configs needed by capturemodes
+        glob_vars = self.settings_manager.get(['capture modes',"image types","output types"])
+   
+        for name in glob_vars["capture modes"].keys():
+            capture_mode = CaptureMode(glob_vars["capture modes"][name],glob_vars["image types"],glob_vars["output types"])
+            for name in capture_mode.camera_settings.keys():
+                needed_configs.append(name)
+        needed_configs = list(set(needed_configs))
+        #get the current and possible values for all the different configs
+        #for config in needed_configs:
+        #    current_configs[name] = self._get_config(config)
+          
+        print "Downloaded relevent camera settings:",needed_configs
         #time.sleep(10)
         #with open("Pysces/test_camera_configs","rb") as fp:
         #    configs = cPickle.load(fp)

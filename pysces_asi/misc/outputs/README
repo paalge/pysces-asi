@@ -1,0 +1,26 @@
+This folder contains all the code for producing outputs through pysces_asi. 
+
+To create a new output type you must either create a new ".py" file in this folder containing the fuction or add the function to an existing file. 
+
+All functions should accept an allskyImage object, an outputType object and a settingsManager object as their only three arguments.
+
+All output functions should return an object which has a save(filename) or a savefig(filename) method, in which case pysces_asi will take care of saving the output on the filesystem and copying it to the webserver. These operations are based on the information given in the output declaration in the settings file. If there is no output to be saved (for example if the output is a direct copy of the image), then the output function may return None. An example of  a suitable return object is a PASKIL allskyImage object.
+
+To make your function available to pysces_asi you must register it with the output_task_handler by calling pysces_asi.output_task_handler.register("my_func_name", my_func). In the settings file, you can request this output by adding "my_func_name" to the list of outputs.
+
+##### Example #######
+This is probably best explainedd by a simple example. Say that we want an output that simply prints the name of the image. First of all, we create a new file in the outputs folder (the one containing this readme!) called my_new_output.py. In this file we put the following code:
+
+	from pysces_asi.output_task_handler import register
+
+	def print_name(image, output, settings_manager):
+		print image.getFilename()
+		return None
+
+	register("print_filename", print_name)
+
+
+Simple enough - we have defined a function that prints the name, and we have registered it with the output_task_handler. Note that in this case, we don't have any output that we want saved, so we return None.
+
+To get pysces_asi to use our new function, we simply add "print_filename" to the list of outputs that we want produced in the capture mode definition in the settings.txt file.
+

@@ -28,8 +28,8 @@ import math
 
 import ephem
 
-import capture
-from data_storage_classes import CaptureMode
+from pysces_asi import capture
+from pysces_asi.data_storage_classes import CaptureMode
 
 #define the functions used in the settings file
 ##############################################################################################

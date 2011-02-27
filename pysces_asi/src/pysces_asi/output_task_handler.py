@@ -23,11 +23,43 @@ CPUs.
 """
 import multiprocessing
 import threading
+import os.path
+import imp
+import glob
 
-import network
+from pysces_asi import network
 from pysces_asi.multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
-from pysces_asi.output_task import OutputTask
+from pysces_asi.output_task import OutputTask, output_functions
 from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
+
+
+def register(name, plugin):
+    
+    if output_functions.has_key(name):
+        raise ValueError, "A plugin called \'"+name+"\' already exists."
+    output_functions[name] = plugin
+
+
+def load_output_functions(outputs_folder):
+    """
+    Imports all the files in .pysces_asi/outputs, causing all the functions
+    to be registered.
+    """
+    #get list of plugin files
+    plugins = glob.glob(outputs_folder+"/*.py")
+    
+    for p in plugins:
+        imp.load_source(os.path.basename(p).rstrip(".py"), p)
+
+
+def clear_plugins_list():
+    """
+    Clears the output functions  dict.
+    """
+    output_functions.clear()
+
+
+
 
 ##############################################################################################  
 
@@ -57,6 +89,12 @@ class OutputTaskHandler(ThreadQueueBase):
         #create a processing pool to produce outputs in the order that their respective image types
         #are recieved from the camera (useful for creating keograms for example)
         self._pipelined_processing_pool = ProcessQueueBase(workers=1,name="Pipelined Processing Pool")
+        
+        #load the output creation functions
+        home = os.path.expanduser("~")
+        clear_plugins_list()
+        load_output_functions(os.path.normpath(home + "/.pysces_asi/outputs"))
+        
         
         #check to see if we need a web-server mounted
         try:
@@ -89,7 +127,7 @@ class OutputTaskHandler(ThreadQueueBase):
             
             #pull an outputTask out of the queue
             output_task = self._task_queue.get()
-            
+
             #there is the chance that this could be a ThreadTask object, rather than a 
             #OutputTask object, and we need to be able to excute it.
             if isinstance(output_task, ThreadTask):
@@ -123,6 +161,11 @@ class OutputTaskHandler(ThreadQueueBase):
             else:
                 self.__pipelined_lock.release()
                 #if this happens then something has gone seriously wrong!
+                print "**error**"+ str(type(output_task))+ " is neither a ThreadTask nor an OutputTask and cannot be executed"+" by the OutputTaskHandler."
+                print "output_task = ", output_task
+                print "comparison = ", isinstance(output_task, type(OutputTask))
+                print "type comparison = ", (type(output_task) is type(OutputTask))
+                print dir(output_task)
                 raise(TypeError, str(type(output_task))+
                       " is neither a ThreadTask nor an OutputTask and cannot be executed" +
                       " by the OutputTaskHandler.")
@@ -159,20 +202,20 @@ class OutputTaskHandler(ThreadQueueBase):
         processing pools and the internal worker thread.
         """
         #kill own worker thread
+
         ThreadQueueBase.exit(self)
-        print "killed self"        
+        print "OutputTaskHandler: Killed self"        
         
         #shutdown the processing pools
         self._processing_pool.exit()
         self._pipelined_processing_pool.exit()
-        print "joined processing pools"
+        print "OutputTaskHandler: Joined processing pools"
         
         #kill the network manager
         if (self._network_manager is not None):
             self._network_manager.exit()
-            print "killed network manager"
+            print "OutputTaskHandler: Killed network manager"
         
 
     ##############################################################################################  
 ##############################################################################################             
-           

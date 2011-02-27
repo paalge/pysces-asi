@@ -41,6 +41,9 @@ pysces_rw_folder = os.path.normpath(home_folder+'/.pysces_asi')
 #get list of camera plugins
 camera_files = ["misc/cameras/"+os.path.basename(i) for i in glob.glob("misc/cameras/*.py")]
 
+#get a list of output function files
+output_function_files = ["misc/outputs/"+os.path.basename(i) for i in glob.glob("misc/outputs/*.py")]
+output_function_files.append("README") #add the readme file to it as well
 
 setup(name='pysces_asi',
       version='2.0',
@@ -55,7 +58,9 @@ setup(name='pysces_asi',
                   (pysces_rw_folder+"/tasks.daily",["misc/tasks.daily/README"]),
                   (pysces_rw_folder+"/tasks.startup",["misc/tasks.startup/README"]),
                   (pysces_rw_folder+"/tasks.per_image",["misc/tasks.per_image/README"]),
-                  (pysces_rw_folder+"/cameras",camera_files)]
+                  (pysces_rw_folder+"/cameras",camera_files),
+                  (pysces_rw_folder+"/outputs",output_function_files)]
+      
       )
 
 #since we install as root then the rw_folder is created with root as the owner
@@ -71,8 +76,10 @@ if sys.argv.count('install') != 0:
     #we also need to double check that the README files don't get executable bits set - otherwise
     #the CronManager will get confused!
     print "Checking that README files have not been made executable"
-    for f in [os.path.normpath(pysces_rw_folder+"/tasks.daily/README"), os.path.normpath(pysces_rw_folder+"/tasks.startup/README"),
-              os.path.normpath(pysces_rw_folder+"/tasks.per_image/README")]:
+    for f in [os.path.normpath(pysces_rw_folder+"/tasks.daily/README"), 
+              os.path.normpath(pysces_rw_folder+"/tasks.startup/README"),
+              os.path.normpath(pysces_rw_folder+"/tasks.per_image/README"),
+              os.path.normpath(pysces_rw_folder+"/outputs/README")]:
         return_code = os.system("chmod -x "+f)
         if return_code != 0:
             print "Error! Failed to change execute permissions on \'"+f+"\'"        

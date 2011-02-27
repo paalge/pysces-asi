@@ -23,6 +23,7 @@ import cPickle
 
 from pysces_asi import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
 from pysces_asi.camera import GphotoCameraManager, register
+from pysces_asi.data_storage_classes import CaptureMode
 
 ##############################################################################################  
 
@@ -39,6 +40,33 @@ class D90CameraManager(GphotoCameraManager):
 
     ##############################################################################################      
     
+    def _download_configs(self):
+        """
+        Returns a dictionary containing CameraConfig objects for all of the camera configs needed 
+        internally and for the capture modes defined in the settings file..
+        The keys are the short names of the configs.
+        """
+        current_configs = {}
+        
+        needed_configs = ['capturetarget', 'imagequality']
+        
+        #get configs needed by capturemodes
+        glob_vars = self.settings_manager.get(['capture modes',"image types","output types"])
+   
+        for name in glob_vars["capture modes"].keys():
+            capture_mode = CaptureMode(glob_vars["capture modes"][name],glob_vars["image types"],glob_vars["output types"])
+            for name in capture_mode.camera_settings.keys():
+                needed_configs.append(name)
+        needed_configs = list(set(needed_configs))
+        
+        #get the current and possible values for all the different configs
+        for config in needed_configs:
+            current_configs[name] = self._get_config(config)
+          
+        return current_configs
+
+   ############################################################################################## 
+        
     def _set_capture_mode(self, capture_mode):
         """
         Sets the camera configs to those specified in the CaptureMode object

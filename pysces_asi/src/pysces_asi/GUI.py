@@ -15,13 +15,14 @@
 #You should have received a copy of the GNU General Public License
 #along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
 import wx
+#import wxmpl
 from threading import Thread
 import threading
 import time
 import datetime
-import matplotlib
+#import matplotlib
 
-import main
+from pysces_asi import main
 
 class PlotPanel (wx.Panel):
     """
@@ -83,29 +84,31 @@ class PlotPanel (wx.Panel):
     # abstract, to be overridden by child classes
         raise NotImplementedError,"Abstract method - must be defined in subclass"
 
-class ScheduleSummaryPanel(PlotPanel):
-    def __init__(self,parent):
-        PlotPanel.__init__(self,parent)
-    
-    def draw(self,data=None):
-        """Draw data."""
-        if not hasattr( self, 'subplot' ):
-            self.subplot = self.figure.add_subplot( 111 )
         
-        self.subplot.cla()
-        if data is not None:
-            if len(data.times) == 0:
-                return
-            #plot data
-            self.subplot.plot(data.times,data.sun_angles)
-            self.subplot.plot(data.times,data.moon_angles)
-            
-            self.subplot.set_xlim(min(data.times),max(data.times))
-            self.subplot.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H:%M"))
-    
-    def on_redraw(self, data):
-        future = data['future_schedule']
-        self.draw(future)
+
+#class ScheduleSummaryPanel(wxmpl.PlotPanel):
+#    def __init__(self,parent):
+#        wxmpl.PlotPanel.__init__(self,parent,-1)
+#    
+#    def plot_schedule(self,data=None):
+#        fig = self.get_figure()
+#        axes = fig.gca()
+#        axes.clear()
+#        if data is not None:
+#            if len(data.times) == 0:
+#                return
+#            #plot data
+#            axes.plot(data.times,data.sun_angles)
+#            axes.plot(data.times,data.moon_angles)
+#            
+#            axes.set_xlim(min(data.times),max(data.times))
+#            axes.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H:%M"))
+#        print "drawing"
+#        self.draw()
+#    
+#    def on_redraw(self, data):
+#        future = data['future_schedule']
+#        self.plot_schedule(future)
 
 
 class TimePanel(wx.Panel):
@@ -338,9 +341,9 @@ class MainFrame(wx.Frame):
         self.status_panel = StatusPanel(self)
         
         #self.schedule_parent_panel = wx.Panel(self,-1)
-        #self.schedule_panel = ScheduleSummaryPanel(self.schedule_parent_panel)
+        #self.schedule_panel = ScheduleSummaryPanel(self)
         self.vsizer=wx.BoxSizer(wx.VERTICAL) 
-        #self.vsizer.Add(self.schedule_parent_panel,1,wx.EXPAND)
+        #self.vsizer.Add(self.schedule_panel,1,wx.EXPAND)
         self.vsizer.Add(self.status_panel, 0,wx.EXPAND) 
         self.vsizer.Add(self.tw, 1,wx.EXPAND)
         self.SetSizer(self.vsizer)
@@ -391,6 +394,7 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(menuBar)
      
         self.cleanup_thread = Thread(target=self.on_close)
+        self.__stopping_thread = None
         wx.EVT_CLOSE(self, self.exit)
         
     ###############################################################################
@@ -409,8 +413,8 @@ class MainFrame(wx.Frame):
         self.menuStart.Enable(True)
         self.menuStop.Enable(False)
         self.status_panel.blank()
-        t=threading.Thread(target=self.pysces.stop)
-        t.start()
+        self.__stopping_thread = threading.Thread(target=self.pysces.stop)
+        self.__stopping_thread.start()
         
 
     ###############################################################################
@@ -434,6 +438,8 @@ class MainFrame(wx.Frame):
     ###############################################################################
     
     def on_close(self):
+        if self.__stopping_thread is not None:
+            self.__stopping_thread.join()
         self.pysces.setVar({"gui_term_viewtime":self.tw.show_time,
                          "gui_term_viewdate":self.tw.show_date})
         self.pysces.exit()

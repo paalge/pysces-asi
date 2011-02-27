@@ -30,14 +30,14 @@ import datetime
 import time
 import os
 
-import host
-import output_task_handler
+from pysces_asi import host
+from pysces_asi import output_task_handler
 
-from multitask import ThreadQueueBase, ThreadTask
-from data_storage_classes import CaptureMode
-from output_task import create_output_tasks
-from camera import GphotoError
-import camera
+from pysces_asi.multitask import ThreadQueueBase, ThreadTask
+from pysces_asi.data_storage_classes import CaptureMode
+from pysces_asi.output_task import create_output_tasks
+from pysces_asi.camera import GphotoError
+from pysces_asi import camera
 
 ##############################################################################################  
 
@@ -58,6 +58,7 @@ class CaptureManager(ThreadQueueBase):
             home = os.path.expanduser("~")
             cameras_folder = home + "/.pysces_asi/cameras"           
             camera_plugin_name = self._settings_manager.get(["camera"])['camera']
+            camera.clear_plugins_list()
             camera.load_camera_plugins(cameras_folder)          
             self._camera_manager = camera.cameras[camera_plugin_name](settings_manager)
             
@@ -145,8 +146,12 @@ class CaptureManager(ThreadQueueBase):
                             if flag:
                                 self._settings_manager.set({"output": "CaptureManager> Waiting for OutputTaskHandler"})
                                 flag = False
-                            time.sleep(1)                
-            
+                            time.sleep(1)
+                        except Exception, ex:
+                            traceback.print_exc()
+                            self.exit()
+                            raise ex               
+                
                 #wait remaining delay time, unless a new capture mode comes into the queue
                 try:
                     #if the delay time has already been exceeded then set remaining delay to 0
@@ -190,10 +195,7 @@ class CaptureManager(ThreadQueueBase):
         """
         #kill own worker thread
         ThreadQueueBase.exit(self)
-        
-        #clear the plugins list
-        camera.clear_plugins_list()
-        
+
         try:
             self._camera_manager.exit()
         except AttributeError:

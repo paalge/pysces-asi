@@ -31,7 +31,7 @@ import imp
 from subprocess import Popen, PIPE
 
 
-from multitask import ThreadQueueBase, ThreadTask
+from pysces_asi.multitask import ThreadQueueBase, ThreadTask
 
 
 cameras = {} #dict to hold all camera plugins
@@ -43,10 +43,10 @@ def register(name, plugin):
     is imported. The plugin argument should be a sub-class of CameraManagerBase.
     The name argument should correspond to the name used in the settings file.
     """
-    if globals()['cameras'].has_key(name):
+    if cameras.has_key(name):
         raise ValueError, "A plugin called \'"+name+"\' already exists."
     
-    globals()['cameras'][name] = plugin
+    cameras[name] = plugin
 
 
 def load_camera_plugins(cameras_folder):
@@ -59,12 +59,15 @@ def load_camera_plugins(cameras_folder):
     
     for p in plugins:
         imp.load_source(os.path.basename(p).rstrip(".py"), p)
+    
+    if len(cameras.keys()) == 0:
+        raise RuntimeError, "No camera plugins found in \'"+cameras_folder+"/*.py\'"    
 
 def clear_plugins_list():
     """
     Clears the plugin dict.
     """
-    globals()['cameras'] = {}
+    cameras.clear()
 
 
 class GphotoError(Exception):

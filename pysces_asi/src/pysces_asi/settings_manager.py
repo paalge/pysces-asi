@@ -25,9 +25,9 @@ import os
 import multiprocessing
 from threading import Thread
 
-import persist 
-import settings_file_parser
-from multitask import ThreadQueueBase, RemoteTask
+from pysces_asi import persist 
+from pysces_asi import settings_file_parser
+from pysces_asi.multitask import ThreadQueueBase, RemoteTask
 
 
 class _SettingsManagerProxy(ThreadQueueBase):
@@ -309,8 +309,7 @@ class SettingsManager(ThreadQueueBase):
             self.remote_task_thread.join()
             self._remote_input_queue.close()
             ThreadQueueBase.exit(self)
-#            self._manager.shutdown()
-            print "settings manager has exited"
+            print "SettingsManager has exited"
     
     ##############################################################################################    
     

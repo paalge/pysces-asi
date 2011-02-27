@@ -21,9 +21,9 @@ import matplotlib
 #allows the script to be started remotely
 matplotlib.use('Agg') 
 
-import settings_manager
-import scheduler
-import cron
+from pysces_asi import settings_manager
+from pysces_asi import scheduler
+from pysces_asi import cron
 
 
 class MainBox:
@@ -80,7 +80,12 @@ class MainBox:
         #kill settings manager
         self.__settings_manager.set({"output":"MainBox> Killing settings_manager"})
 
-        self.__settings_manager.exit()
+        try:
+            self.__settings_manager.exit()
+        except RuntimeError,ex:
+            #if the settings file has been modified while the program is running, then
+            #give up updating it.
+            print ex.args[0]
         
     ##############################################################################################         
     

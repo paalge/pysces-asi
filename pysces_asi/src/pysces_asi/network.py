@@ -30,7 +30,7 @@ import multiprocessing
 from threading import Thread
 from subprocess import Popen, PIPE
 
-from multitask import ThreadQueueBase, RemoteTask
+from pysces_asi.multitask import ThreadQueueBase, RemoteTask
 
 
 class _NetworkManagerProxy(ThreadQueueBase):

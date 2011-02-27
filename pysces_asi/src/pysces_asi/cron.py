@@ -25,7 +25,7 @@ import os
 import subprocess
 import threading
 
-from multitask import ThreadQueueBase
+from pysces_asi.multitask import ThreadQueueBase
 
 def remove_from_dict(d,k):
     d.pop(k)

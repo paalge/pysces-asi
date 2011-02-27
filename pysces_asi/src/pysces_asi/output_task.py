@@ -20,9 +20,11 @@ import threading
 import traceback
 import gc
 import multiprocessing
-
-from outputs import TYPES
+import matplotlib._pylab_helpers
 from PASKIL import allskyImage
+
+
+output_functions = {} #dict to hold all output functions registered
 
 ##############################################################################################  
 
@@ -113,7 +115,7 @@ class SubTask:
         
             #run the subtask execution function (this is what actually produces the output)
             output = self.function(self.image, self.output, settings_manager_proxy)
-            
+
             #save the output on the host
             if output is not None and self.output_filename is not None:
                 try:
@@ -121,12 +123,20 @@ class SubTask:
                 except AttributeError:
                     #this is added for compatibility with matplotlib figure objects
                     output.savefig(self.output_filename)
-            
+                    
+                    #the following seems to be needed to break circular references in 
+                    #matplolib and prevent mem leaks
+                    output.clf()
+                    del output
+                    matplotlib._pylab_helpers.Gcf().destroy_all()
+                    matplotlib._pylab_helpers.gc.collect()
+                    
             #copy the output to the server if required
             if ((self.file_on_server is not None) and (network_manager_proxy is not None)):
                 network_manager_proxy.copy_to_server(self.output_filename, self.file_on_server)
             del self.image
-            
+            #del output
+           
             # if we only wanted the output on the server, then remove the copy on the host
             if remove_file_on_host:
                 os.remove(self.output_filename)
@@ -178,7 +188,7 @@ class OutputTask:
         for output in self._outputs:
             
             #get the function that the sub-task needs to run
-            function = TYPES[output.type]
+            function = output_functions[output.type]
             
             #create the subTask object
             sub_task = SubTask(function, self._image_file, output, self._folder_on_host)
