@@ -51,7 +51,7 @@ class D90CameraManager(GphotoCameraManager):
         needed_configs = ['capturetarget', 'imagequality']
         
         #get configs needed by capturemodes
-        glob_vars = self.settings_manager.get(['capture modes',"image types","output types"])
+        glob_vars = self._settings_manager.get(['capture modes',"image types","output types"])
    
         for name in glob_vars["capture modes"].keys():
             capture_mode = CaptureMode(glob_vars["capture modes"][name],glob_vars["image types"],glob_vars["output types"])
