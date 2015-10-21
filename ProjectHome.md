@@ -1,0 +1,3 @@
+Built on top of Gphoto and PASKIL, Pysces is a scheduling program for controlling all-sky cameras. It features a number of different scheduling parameters including sun/moon angle and a wide variety of post capture processing options.
+
+This project is still in its infancy, but come back soon.......
