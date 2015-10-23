@@ -370,6 +370,39 @@ class GphotoCameraManager(CameraManagerBase):
 
     ##########################################################################
 
+    def _take_photo_and_download(self):
+        """
+        Captures an image and downloads all the images into the temporary folder
+        on the host. The image files are named using the filename format 
+        specified in the settings file and the time of capture. This method 
+        has been written in order to incorporate cameraes without the ability
+        to capture to memory card
+        The capture time is a datetime object of the capture time in 
+        UT.
+
+        Note: The time of capture recorded and used to name the files is the time
+        just before the shutter is opened, i.e. before the call to 
+        gphoto2 --capture-image-and-download.
+        """
+
+        # take the picture!
+        time_of_capture = datetime.datetime.utcnow()
+        self._settings_manager.set(
+            {"output": "CameraManager> Capturing image and downloading."})
+
+        glob_vars = self._settings_manager.get(['tmp dir'])
+        print("gphoto2 --capture-image-and-download --filename \"" + glob_vars[
+            'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"")
+        p = Popen(
+            "gphoto2 --capture-image-and-download --filename \"" + glob_vars[
+                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)
+        p.wait()
+        if p.returncode != 0:
+            raise GphotoError, "Gphoto2 Error: Failed to capture and download image"
+
+        return time_of_capture
+    ##########################################################################
+
     def _take_photo(self, number_of_images):
         """
         Captures an image and returns a tuple (active folder, capture time), where

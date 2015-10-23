@@ -67,7 +67,7 @@ class A7SCameraManager(GphotoCameraManager):
         get_raw = False
         get_jpeg = False
 
-        if files.count("ARW") != 0:
+        if files.count("arw") != 0:
             get_raw = True
 
         if files.count("jpeg") != 0:
@@ -111,18 +111,18 @@ class A7SCameraManager(GphotoCameraManager):
             number_of_images += 1
 
         # capture the image and find which folder the camera puts it in
-        active_folder, time_of_capture = self._take_photo(number_of_images)
+        time_of_capture = self._take_photo_and_download()
 
-        if active_folder == None:
-            # the folder wasn't empty to start with so we need to empty it
-            # first
-            return None
-
-        # otherwise copy the images from the camera into the current tmp dir
-        self._copy_photos(active_folder, time_of_capture)
-
-        # delete images from camera card
-        self._delete_photos(active_folder)
+#         if active_folder == None:
+#             # the folder wasn't empty to start with so we need to empty it
+#             # first
+#             return None
+#
+#         # otherwise copy the images from the camera into the current tmp dir
+#         self._copy_photos(active_folder, time_of_capture)
+#
+#         # delete images from camera card
+#         self._delete_photos(active_folder)
 
         new_images = {}
 
@@ -130,26 +130,26 @@ class A7SCameraManager(GphotoCameraManager):
         # write a text based site info file, we create the info dictionary here
         # and then pickle it. The PASKIL plugin can then read the pickled dict
         if get_raw:
-            info = self._build_PASKIL_info("ARW", time_of_capture, glob_vars)
+            info = self._build_PASKIL_info("arw", time_of_capture, glob_vars)
 
             info_filename = glob_vars[
-                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + "_ARW.info"
+                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + "_arw.info"
             image_filename = glob_vars[
-                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".ARW"
+                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".arw"
 
             # open file to pickle info dict into
             with open(info_filename, "wb") as fp:
                 cPickle.dump(info, fp)
 
-            new_images["ARW"] = (image_filename, info_filename)
+            new_images["are"] = (image_filename, info_filename)
 
         if get_jpeg:
             info = self._build_PASKIL_info("jpeg", time_of_capture, glob_vars)
 
             info_filename = glob_vars[
-                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + "_JPG.info"
+                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + "_jpg.info"
             image_filename = glob_vars[
-                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".JPG"
+                'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".jpg"
 
             # open file to pickle info dict into
             with open(info_filename, "wb") as fp:
