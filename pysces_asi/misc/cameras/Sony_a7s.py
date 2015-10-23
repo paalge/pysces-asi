@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (C) Nial Peters 2009
 # Pål Ellingsen 2015
 #
@@ -31,7 +32,7 @@ from pysces_asi.camera import GphotoCameraManager, register
 
 class A7SCameraManager(GphotoCameraManager):
     """
-    Class for controlling a Nikon D80 camera. 
+    Class for controlling a Sony Alpha 7S camera. 
     """
 
     def __init__(self, settings_manager):
@@ -39,8 +40,8 @@ class A7SCameraManager(GphotoCameraManager):
 
         # ensure that the camera is set to capture to the card, rather than the
         # RAM
-        if self.camera_configs['capturetarget'].current != "Memory card":
-            self._set_config('capturetarget', 'Memory card')
+#         if self.camera_configs['capturetarget'].current != "Memory card":
+#             self._set_config('capturetarget', 'Memory card')
 
     ##########################################################################
 
@@ -57,7 +58,7 @@ class A7SCameraManager(GphotoCameraManager):
             if self.camera_configs[name].current != value:
                 self._set_config(name, value)
 
-        # work out what the imgquality config should be set to based on the
+        # work out what the imagequality config should be set to based on the
         # image types in the outputs
         files = []
         for output in capture_mode.outputs:
@@ -66,21 +67,21 @@ class A7SCameraManager(GphotoCameraManager):
         get_raw = False
         get_jpeg = False
 
-        if files.count("NEF") != 0:
+        if files.count("ARW") != 0:
             get_raw = True
 
         if files.count("jpeg") != 0:
             get_jpeg = True
 
         if get_jpeg and get_raw:
-            if self.camera_configs["imgquality"].current != "NEF+Normal":
-                self._set_config("imgquality", "NEF+Normal")
+            if self.camera_configs["imagequality"].current != "RAW+JPEG":
+                self._set_config("imagequality", "RAW+JPEG")
         elif get_raw:
-            if self.camera_configs["imgquality"].current != "NEF (Raw)":
-                self._set_config("imgquality", "NEF (Raw)")
+            if self.camera_configs["imagequality"].current != "RAW":
+                self._set_config("imagequality", "RAW")
         else:
-            if self.camera_configs["imgquality"].current != "JPEG Normal":
-                self._set_config("imgquality", "JPEG Normal")
+            if self.camera_configs["imagequality"].current != "Standard":
+                self._set_config("imagequality", "Standard")
 
         self.capture_mode = capture_mode
 
@@ -101,11 +102,11 @@ class A7SCameraManager(GphotoCameraManager):
         number_of_images = 0
 
         # see if we need to download a raw file
-        if self.camera_configs["imgquality"].current.count("ARW") != 0:
+        if self.camera_configs["imagequality"].current.count("RAW") != 0:
             get_raw = True
             number_of_images += 1
 
-        if self.camera_configs["imgquality"].current.count("Normal") != 0:
+        if self.camera_configs["imagequality"].current.count("Standard") != 0:
             get_jpeg = True
             number_of_images += 1
 
