@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 # Copyright (C) Nial Peters 2009
+# Pål Ellingsen 2015
 #
 # This file is part of pysces_asi.
 #
@@ -316,7 +318,7 @@ class GphotoCameraManager(CameraManagerBase):
         # run gphoto function in separate process
 
         p = Popen(
-            "echo gphoto2 --set-config " + str(name) + "=" + str(value_index) + " > ~/set_config.txt", shell=True)
+            "gphoto2 --set-config " + str(name) + "=" + str(value_index), shell=True)
         p.wait()
 
         if p.returncode != 0:
