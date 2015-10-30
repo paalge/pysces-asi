@@ -18,8 +18,8 @@
 The D80 module provides a single camera manager class for controlling a Nikon
 D80 camera.
 """
-from __future__ import with_statement
-import cPickle
+
+import pickle
 
 from pysces_asi import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
 from pysces_asi.camera import GphotoCameraManager, register
@@ -48,7 +48,7 @@ class D80CameraManager(GphotoCameraManager):
         CameraManagerBase class).
         """
         #set camera configs based on capture mode settings
-        for name, value in capture_mode.camera_settings.items():
+        for name, value in list(capture_mode.camera_settings.items()):
             if self.camera_configs[name].current != value:
                 self._set_config(name, value)
 
@@ -126,7 +126,7 @@ class D80CameraManager(GphotoCameraManager):
             
             #open file to pickle info dict into 
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["NEF"] = (image_filename, info_filename)
         
@@ -138,7 +138,7 @@ class D80CameraManager(GphotoCameraManager):
             
             #open file to pickle info dict into 
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["jpeg"] = (image_filename, info_filename)
             

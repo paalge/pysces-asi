@@ -19,8 +19,8 @@ This module defines the plugin class needed to allow PASKIL to load the D80's
 jpeg images. See the documentation for the PASKIL.allskyImagePlugins module
 for details about plugin classes.
 """
-from __future__ import with_statement
-import cPickle
+
+import pickle
 import Image
 
 from PASKIL import allskyImage, allskyImagePlugins, misc
@@ -43,16 +43,16 @@ class Pysces_DSLR_LYR_JPG:
         """
         try:
             with open(info_filename, "rb") as fp:
-                info = cPickle.load(fp)
-        except Exception, ex:
-            print "failed to open site info file"
+                info = pickle.load(fp)
+        except Exception as ex:
+            print("failed to open site info file")
             raise ex
             return False
 
         try:
             image = Image.open(image_filename)
         except:
-            print "failed to open image"
+            print("failed to open image")
             return False
 
         return True
@@ -67,7 +67,7 @@ class Pysces_DSLR_LYR_JPG:
         image = Image.open(image_filename)
 
         with open(info_filename, "rb") as fp:
-            info = cPickle.load(fp)
+            info = pickle.load(fp)
 
         # attempt to load the exif data
         try:

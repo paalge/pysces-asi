@@ -25,7 +25,7 @@ The CaptureManager also creates a HostManager object and uses this to update the
 folder structure on the host before each image is captured.
 """
 import traceback
-import Queue
+import queue
 import datetime
 import time
 import os
@@ -69,7 +69,7 @@ class CaptureManager(ThreadQueueBase):
             self._output_task_handler = output_task_handler.OutputTaskHandler(
                 settings_manager)
 
-        except Exception, ex:
+        except Exception as ex:
             traceback.print_exc()
             self._settings_manager.set(
                 {"output": "CameraManager> ** ERROR! **  " + ex.args[0]})
@@ -140,7 +140,7 @@ class CaptureManager(ThreadQueueBase):
                     images = self._camera_manager.capture_images()
 
                 # RuntimeError is rasied when gphoto fails in the cameraManager
-                except GphotoError, ex:
+                except GphotoError as ex:
                     self._settings_manager.set(
                         {"output": "CaptureManager> " + ex.args[0]})
                     images = None
@@ -158,7 +158,7 @@ class CaptureManager(ThreadQueueBase):
                             self._output_task_handler.commit_task(
                                 output_tasks[i])
                             i += 1
-                        except Queue.Full:
+                        except queue.Full:
                             # the outputTaskHandler is busy, wait for a bit and
                             # then retry
                             if flag:
@@ -166,7 +166,7 @@ class CaptureManager(ThreadQueueBase):
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
                                 flag = False
                             time.sleep(1)
-                        except Exception, ex:
+                        except Exception as ex:
                             traceback.print_exc()
                             self.exit()
                             raise ex
@@ -190,7 +190,7 @@ class CaptureManager(ThreadQueueBase):
                     if hasattr(capture_mode, "top_of_min"):
                         top_of_min_wait = capture_mode.top_of_min
                     continue
-                except Queue.Empty:
+                except queue.Empty:
                     # no new capture modes have come in, so we just continue
                     # with the one we have got
                     top_of_min_wait = False

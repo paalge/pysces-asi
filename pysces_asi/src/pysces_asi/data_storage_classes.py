@@ -38,7 +38,7 @@ class CaptureMode:
         self.outputs = []
         self.camera_settings = {}
 
-        for name, value in capture_mode_settings.items():
+        for name, value in list(capture_mode_settings.items()):
             if name == "name":
                 self.name = value
             elif name == "delay":

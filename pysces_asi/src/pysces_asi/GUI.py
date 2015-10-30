@@ -37,9 +37,9 @@ class PlotPanel (wx.Panel):
         from matplotlib.figure import Figure
         self.parent = parent
         # initialize Panel
-        if 'id' not in kwargs.keys():
+        if 'id' not in list(kwargs.keys()):
             kwargs['id'] = wx.ID_ANY
-        if 'style' not in kwargs.keys():
+        if 'style' not in list(kwargs.keys()):
             kwargs['style'] = wx.NO_FULL_REPAINT_ON_RESIZE
         wx.Panel.__init__(self, parent, **kwargs)
 

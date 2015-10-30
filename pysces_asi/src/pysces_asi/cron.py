@@ -104,7 +104,7 @@ class CronManager(ThreadQueueBase):
             self._settings_manager.register("output folder",self.run_daily_tasks,["output folder","cron_folder_to_process"])
             self._settings_manager.register("cron_image_to_process",self.run_per_image_tasks,["cron_image_to_process"])
                         
-        except Exception, ex:
+        except Exception as ex:
             traceback.print_exc()
             self.exit()
             raise ex
@@ -179,10 +179,10 @@ class CronManager(ThreadQueueBase):
                     continue
                 
             p.wait()
-            print p.stdout.read()
+            print(p.stdout.read())
             
             outerr = p.stderr.read()
-            print outerr
+            print(outerr)
 
             if p.returncode != 0:
                 self._settings_manager.set({"output": "CronManager> Error! The script \""+script+"\" returned exit code "+str(p.returncode)})

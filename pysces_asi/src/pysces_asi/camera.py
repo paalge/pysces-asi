@@ -45,7 +45,7 @@ def register(name, plugin):
     is imported. The plugin argument should be a sub-class of CameraManagerBase.
     The name argument should correspond to the name used in the settings file.
     """
-    if cameras.has_key(name):
+    if name in cameras:
         raise ValueError("A plugin called \'" + name + "\' already exists.")
 
     cameras[name] = plugin
@@ -62,7 +62,7 @@ def load_camera_plugins(cameras_folder):
     for p in plugins:
         imp.load_source(os.path.basename(p).rstrip(".py"), p)
 
-    if len(cameras.keys()) == 0:
+    if len(list(cameras.keys())) == 0:
         raise RuntimeError(
             "No camera plugins found in \'" + cameras_folder + "/*.py\'")
 
@@ -110,7 +110,7 @@ class CameraManagerBase(ThreadQueueBase):
 
             self.camera_configs = self.download_configs()
             self.capture_mode = None
-        except Exception, ex:
+        except Exception as ex:
             self.exit()
             raise ex
 
@@ -398,8 +398,8 @@ class GphotoCameraManager(CameraManagerBase):
             {"output": "CameraManager> Capturing image and downloading."})
 
         glob_vars = self._settings_manager.get(['tmp dir'])
-        print("gphoto2 --capture-image-and-download --filename \"" + glob_vars[
-            'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"")
+        print(("gphoto2 --capture-image-and-download --filename \"" + glob_vars[
+            'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\""))
         p = Popen(
             "gphoto2 --capture-image-and-download --filename \"" + glob_vars[
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)

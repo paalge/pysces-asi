@@ -18,7 +18,7 @@
 The host module provides a HostManager class responsible for maintaining the 
 folder structure on the host machine.
 """
-from __future__ import with_statement
+
 import os
 import datetime
 

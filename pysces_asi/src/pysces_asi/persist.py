@@ -19,8 +19,8 @@ The persist module provides a PersistantStorage class, which is used by the Sett
 class to store variables that are not in the settings file. Their values are loaded
 again when the program is started.
 """
-from __future__ import with_statement
-import cPickle
+
+import pickle
 
 ##############################################################################################
 
@@ -36,7 +36,7 @@ class PersistantStorage():
       
         try:
             with open(self.__persistant_file,"r") as fp:
-                self.__data = cPickle.load(fp)
+                self.__data = pickle.load(fp)
         except IOError:
             self.__data = {}
     
@@ -61,7 +61,7 @@ class PersistantStorage():
         #first we have to syncronise with the settingsManager's values in case a new variable 
         #has been added since the file was loaded (otherwise it would return its value as None
         
-        for name in self.__data.keys():
+        for name in list(self.__data.keys()):
             try:
                 self.__data[name] = self.__settings_manager.get([name])[name]
             except KeyError:
@@ -77,11 +77,11 @@ class PersistantStorage():
         Store the persistant values in a file and return.
         """
         #get up to date values of persistant variables from the settings manager
-        updated_data = self.__settings_manager.get(self.__data.keys())
+        updated_data = self.__settings_manager.get(list(self.__data.keys()))
 
         #save data
         with open(self.__persistant_file,"w") as fp:
-            cPickle.dump(updated_data,fp)
+            pickle.dump(updated_data,fp)
            
     ##############################################################################################
 ##############################################################################################

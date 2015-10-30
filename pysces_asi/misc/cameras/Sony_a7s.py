@@ -20,8 +20,8 @@
 The Sony_a7s module provides a single camera manager class for controlling a Nikon
 Sony alpha 7s camera.
 """
-from __future__ import with_statement
-import cPickle
+
+import pickle
 
 # import the plugin needed to open the image files in PASKIL
 from pysces_asi import PASKIL_jpg_plugin
@@ -54,7 +54,7 @@ class A7SCameraManager(GphotoCameraManager):
         CameraManagerBase class).
         """
         # set camera configs based on capture mode settings
-        for name, value in capture_mode.camera_settings.items():
+        for name, value in list(capture_mode.camera_settings.items()):
             if self.camera_configs[name].current != value:
                 self._set_config(name, value)
 
@@ -139,7 +139,7 @@ class A7SCameraManager(GphotoCameraManager):
 
             # open file to pickle info dict into
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["are"] = (image_filename, info_filename)
 
@@ -153,7 +153,7 @@ class A7SCameraManager(GphotoCameraManager):
 
             # open file to pickle info dict into
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["jpeg"] = (image_filename, info_filename)
 

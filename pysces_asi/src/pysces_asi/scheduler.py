@@ -137,7 +137,7 @@ class Scheduler:
             try:
                 self.__capture_manager = capture.CaptureManager(
                     self.__settings_manager)
-            except Exception, ex:
+            except Exception as ex:
                 raise ex
             # create sun and moon objects
             self.__sun = ephem.Sun()
@@ -286,7 +286,7 @@ class Scheduler:
 
         # evaluate each test in the schedule and return the name of the capture
         # mode that should be run
-        for test, capture_mode_name in schedule.items():
+        for test, capture_mode_name in list(schedule.items()):
             if eval(test):
                 return capture_mode_name
         # otherwise return None

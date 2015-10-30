@@ -87,10 +87,10 @@ class MainBox:
 
         try:
             self.__settings_manager.exit()
-        except RuntimeError, ex:
+        except RuntimeError as ex:
             # if the settings file has been modified while the program is running, then
             # give up updating it.
-            print ex.args[0]
+            print(ex.args[0])
 
     ##########################################################################
 
@@ -119,7 +119,7 @@ class MainBox:
 if __name__ == '__main__':
 
     def output(s):
-        print s["output"]
+        print(s["output"])
 
     main_box = MainBox()
 

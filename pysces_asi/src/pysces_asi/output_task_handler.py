@@ -35,7 +35,7 @@ from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
 
 def register(name, plugin):
 
-    if output_functions.has_key(name):
+    if name in output_functions:
         raise ValueError("A plugin called \'" + name + "\' already exists.")
     output_functions[name] = plugin
 
@@ -137,7 +137,7 @@ class OutputTaskHandler(ThreadQueueBase):
             # OutputTask object, and we need to be able to excute it.
             if isinstance(output_task, ThreadTask):
                 self.__pipelined_lock.release()
-                print "output task handler: recieved exit command"
+                print("output task handler: recieved exit command")
                 output_task.execute()
                 self._task_queue.task_done()
 
@@ -169,14 +169,12 @@ class OutputTaskHandler(ThreadQueueBase):
             else:
                 self.__pipelined_lock.release()
                 # if this happens then something has gone seriously wrong!
-                print "**error**" + str(type(output_task)) + " is neither a ThreadTask nor an OutputTask and cannot be executed" + " by the OutputTaskHandler."
-                print "output_task = ", output_task
-                print "comparison = ", isinstance(output_task, type(OutputTask))
-                print "type comparison = ", (type(output_task) is type(OutputTask))
-                print dir(output_task)
-                raise(TypeError, str(type(output_task)) +
-                      " is neither a ThreadTask nor an OutputTask and cannot be executed" +
-                      " by the OutputTaskHandler.")
+                print("**error**" + str(type(output_task)) + " is neither a ThreadTask nor an OutputTask and cannot be executed" + " by the OutputTaskHandler.")
+                print("output_task = ", output_task)
+                print("comparison = ", isinstance(output_task, type(OutputTask)))
+                print("type comparison = ", (type(output_task) is type(OutputTask)))
+                print(dir(output_task))
+                raise TypeError
         self._exit_event.set()
 
     ##########################################################################
@@ -196,7 +194,7 @@ class OutputTaskHandler(ThreadQueueBase):
             if thread.isAlive():
                 flag = True
             if not flag:
-                print "### Error! ### Worker thread in " + self.name + " has died!"
+                print("### Error! ### Worker thread in " + self.name + " has died!")
                 raise RuntimeError(
                     "### Error! ### Worker thread in " + self.name + " has died!")
 
@@ -213,17 +211,17 @@ class OutputTaskHandler(ThreadQueueBase):
         # kill own worker thread
 
         ThreadQueueBase.exit(self)
-        print "OutputTaskHandler: Killed self"
+        print("OutputTaskHandler: Killed self")
 
         # shutdown the processing pools
         self._processing_pool.exit()
         self._pipelined_processing_pool.exit()
-        print "OutputTaskHandler: Joined processing pools"
+        print("OutputTaskHandler: Joined processing pools")
 
         # kill the network manager
         if (self._network_manager is not None):
             self._network_manager.exit()
-            print "OutputTaskHandler: Killed network manager"
+            print("OutputTaskHandler: Killed network manager")
 
     ##########################################################################
 ##########################################################################

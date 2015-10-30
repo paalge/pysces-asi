@@ -18,7 +18,7 @@
 The settings file parser module provides a settingsFileParser class for reading
 and writing to the settings file.
 """
-from __future__ import with_statement
+
 import os
 
 
@@ -67,8 +67,8 @@ class SettingsFileParser:
                     variables, i = self.__read_variables(fp, i)
 
                     # append variables to settings
-                    for key, value in variables.items():
-                        if settings.has_key(key):
+                    for key, value in list(variables.items()):
+                        if key in settings:
                             raise ValueError("Redeclaration of " + str(key) +
                                              " on line " + str(i))
                         settings[key] = value

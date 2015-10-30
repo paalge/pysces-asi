@@ -18,8 +18,8 @@
 The D80 module provides a single camera manager class for controlling a Nikon
 D90 camera.
 """
-from __future__ import with_statement
-import cPickle
+
+import pickle
 
 from pysces_asi import PASKIL_jpg_plugin #import the plugin needed to open the image files in PASKIL
 from pysces_asi.camera import GphotoCameraManager, register
@@ -53,9 +53,9 @@ class D90CameraManager(GphotoCameraManager):
         #get configs needed by capturemodes
         glob_vars = self._settings_manager.get(['capture modes',"image types","output types"])
    
-        for name in glob_vars["capture modes"].keys():
+        for name in list(glob_vars["capture modes"].keys()):
             capture_mode = CaptureMode(glob_vars["capture modes"][name],glob_vars["image types"],glob_vars["output types"])
-            for name in capture_mode.camera_settings.keys():
+            for name in list(capture_mode.camera_settings.keys()):
                 needed_configs.append(name)
         needed_configs = list(set(needed_configs))
         
@@ -76,7 +76,7 @@ class D90CameraManager(GphotoCameraManager):
         CameraManagerBase class).
         """
         #set camera configs based on capture mode settings
-        for name, value in capture_mode.camera_settings.items():
+        for name, value in list(capture_mode.camera_settings.items()):
             if self.camera_configs[name].current != value:
                 self._set_config(name, value)
 
@@ -154,7 +154,7 @@ class D90CameraManager(GphotoCameraManager):
             
             #open file to pickle info dict into 
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["NEF"] = (image_filename, info_filename)
         
@@ -166,7 +166,7 @@ class D90CameraManager(GphotoCameraManager):
             
             #open file to pickle info dict into 
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             new_images["jpeg"] = (image_filename, info_filename)
             

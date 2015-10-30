@@ -1,10 +1,10 @@
-from __future__ import with_statement
+
 
 import time
 import random
 import Image
 import datetime
-import cPickle
+import pickle
 # import the plugin needed to open the image files in PASKIL
 from pysces_asi import PASKIL_jpg_plugin
 
@@ -31,7 +31,7 @@ class CameraSimulator(CameraManagerBase):
 
         self.files = list(set(self.files))
 
-        for name, value in capture_mode.camera_settings.items():
+        for name, value in list(capture_mode.camera_settings.items()):
             self.settings_manager.set(
                 {'output': "Setting " + name + " to " + str(value)})
         # print "Camera is being set to "+capture_mode.name
@@ -75,7 +75,7 @@ class CameraSimulator(CameraManagerBase):
 
             # open file to pickle info dict into
             with open(info_filename, "wb") as fp:
-                cPickle.dump(info, fp)
+                pickle.dump(info, fp)
 
             im.save(image_filename, format="jpeg")
 
@@ -108,17 +108,17 @@ class CameraSimulator(CameraManagerBase):
         glob_vars = self.settings_manager.get(
             ['capture modes', "image types", "output types"])
 
-        for name in glob_vars["capture modes"].keys():
+        for name in list(glob_vars["capture modes"].keys()):
             capture_mode = CaptureMode(glob_vars["capture modes"][name], glob_vars[
                                        "image types"], glob_vars["output types"])
-            for name in capture_mode.camera_settings.keys():
+            for name in list(capture_mode.camera_settings.keys()):
                 needed_configs.append(name)
         needed_configs = list(set(needed_configs))
         # get the current and possible values for all the different configs
         # for config in needed_configs:
         #    current_configs[name] = self._get_config(config)
 
-        print "Downloaded relevent camera settings:", needed_configs
+        print("Downloaded relevent camera settings:", needed_configs)
         # time.sleep(10)
         # with open("Pysces/test_camera_configs","rb") as fp:
         #    configs = cPickle.load(fp)

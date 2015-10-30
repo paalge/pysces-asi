@@ -20,7 +20,7 @@ copying files to a CIFS filesystem on a remote server. It also provides
 a proxy for the NetworkManager, which can be used to share a single network
 manager object between multiple processses.
 """
-from __future__ import with_statement
+
 import os
 import string
 import stat
@@ -279,7 +279,7 @@ class NetworkManager(ThreadQueueBase):
                     #if the proxy has been destroyed then this queue won't exist any more!
                     self._output_queues[remote_task.id].put(result)
             
-            except Exception, ex:
+            except Exception as ex:
             
                 if remote_task.method_name != "destroy proxy":
                     #if the proxy has been destroyed then this queue won't exist any more!
@@ -305,7 +305,7 @@ class NetworkManager(ThreadQueueBase):
     
     def _create_proxy(self):
         #create a unique ID for the new proxy
-        current_ids = self._output_queues.keys()
+        current_ids = list(self._output_queues.keys())
         
         if len(current_ids) > 0:
             id = max(current_ids) + 1

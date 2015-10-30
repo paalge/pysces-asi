@@ -227,7 +227,7 @@ class SettingsManager(ThreadQueueBase):
             settings = self.__settings_file_parser.get_settings()
 
             # store settings in variables
-            for key in settings.keys():
+            for key in list(settings.keys()):
                 self.__create(key, settings[key])
 
             # create persistant storage class
@@ -237,10 +237,10 @@ class SettingsManager(ThreadQueueBase):
             # load persistant values into variables
             persistant_data = self.__persistant_storage.get_persistant_data()
 
-            for key in persistant_data.keys():
+            for key in list(persistant_data.keys()):
                 self.__create(key, persistant_data[key], persistant=True)
 
-        except Exception, ex:
+        except Exception as ex:
             # if an exception occurs then we need to shut down the threads and
             # manager before exiting
             self._stay_alive = False
@@ -321,7 +321,7 @@ class SettingsManager(ThreadQueueBase):
             self.remote_task_thread.join()
             self._remote_input_queue.close()
             ThreadQueueBase.exit(self)
-            print "SettingsManager has exited"
+            print("SettingsManager has exited")
 
     ##########################################################################
 
@@ -533,7 +533,7 @@ class SettingsManager(ThreadQueueBase):
 
     def _create_proxy(self):
         # create a unique ID for the proxy
-        current_ids = self._output_queues.keys()
+        current_ids = list(self._output_queues.keys())
 
         if len(current_ids) > 0:
             id_ = max(current_ids) + 1
@@ -591,7 +591,7 @@ class SettingsManager(ThreadQueueBase):
                     # exist any more!
                     self._output_queues[remote_task.id].put(result)
 
-            except Exception, ex:
+            except Exception as ex:
 
                 if remote_task.method_name != "destroy proxy":
                     # if the proxy has been destroyed then this queue won't
@@ -604,7 +604,7 @@ class SettingsManager(ThreadQueueBase):
 
     def __create(self, name, value, persistant=False):
 
-        if self.__variables.has_key(name):
+        if name in self.__variables:
             raise ValueError("A variable called " + name + " already exists.")
 
         self.__variables[name] = value
@@ -644,7 +644,7 @@ class SettingsManager(ThreadQueueBase):
     def __register(self, name, callback, variables):
 
         # check that 'name' actually exists
-        if not self.__variables.has_key(name):
+        if name not in self.__variables:
             raise KeyError(
                 "Cannot register callback for " + str(name) + ". Variable does not exist")
 
@@ -668,7 +668,7 @@ class SettingsManager(ThreadQueueBase):
     def __set(self, group):
 
         # check there are no duplicate entries in the group
-        keys = group.keys()
+        keys = list(group.keys())
         for key in keys:
             if keys.count(key) > 1:
                 raise ValueError("Group cannot contain duplicate entries")
@@ -700,7 +700,7 @@ class SettingsManager(ThreadQueueBase):
 
     def __unregister(self, id_):
 
-        for list_of_ids in self.__callbacks.values():
+        for list_of_ids in list(self.__callbacks.values()):
             if list_of_ids.count(id_) != 0:
                 list_of_ids.remove(id_)
 

@@ -39,7 +39,7 @@ def create_output_tasks(capture_mode, image_files, folder_on_host, settings_mana
     """
     output_tasks = []
     
-    for image_type in image_files.keys():
+    for image_type in list(image_files.keys()):
         outputs = []
         for output in capture_mode.outputs:
             if output.image_type.image_type == image_type:
@@ -141,7 +141,7 @@ class SubTask:
             if remove_file_on_host:
                 os.remove(self.output_filename)
             
-        except Exception, ex:
+        except Exception as ex:
             traceback.print_exc()
             raise ex
         

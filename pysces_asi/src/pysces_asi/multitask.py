@@ -27,7 +27,7 @@ import time
 import traceback
 import multiprocessing
 
-from Queue import Queue
+from queue import Queue
 from threading import Event, Thread, currentThread
 
 
@@ -76,8 +76,9 @@ class ThreadTask:
 
         # catch any exceptions that were raised during execution so that they
         # can be raised in the calling thread, rather than the worker thread.
-        except Exception, self._exception:
-            print "\nException in thread: ", currentThread()
+        except Exception as xxx_todo_changeme:
+            self._exception = xxx_todo_changeme
+            print("\nException in thread: ", currentThread())
             traceback.print_exc()
 
         # set the event to true, to show that the task is finished
@@ -161,7 +162,7 @@ class ThreadQueueBase:
         # encountered will be ignored
         for thread in self._workers:
             if not thread.isAlive():
-                print "### Error! ### Worker thread in " + self.name + " has died!"
+                print("### Error! ### Worker thread in " + self.name + " has died!")
                 raise RuntimeError(
                     "### Error! ### Worker thread in " + self.name + " has died!")
 
@@ -266,7 +267,7 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                print "Syncronisation error in ProcessQueueBase! Task has been re-submitted."
+                print("Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
                 self._input_queue.put(task)
                 continue
 
@@ -305,7 +306,7 @@ class ProcessQueueBase:
         with task completion.
         """
         if not self._input_thread.isAlive():
-            print "### Error! ### Worker thread in " + self.name + " has died!"
+            print("### Error! ### Worker thread in " + self.name + " has died!")
             raise RuntimeError(
                 "### Error! ### Worker thread in " + self.name + " has died!")
         self._input_queue.put(task)
@@ -359,7 +360,7 @@ class ProcessTask:
         # catch any exceptions that were raised during execution so that they can
         # be raised in the calling thread, rather than the internal worker
         # thread
-        except Exception, ex:
+        except Exception as ex:
             self.return_queue.put(ex)
 
         finally:
