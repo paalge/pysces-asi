@@ -46,7 +46,7 @@ def register(name, plugin):
     The name argument should correspond to the name used in the settings file.
     """
     if cameras.has_key(name):
-        raise ValueError, "A plugin called \'" + name + "\' already exists."
+        raise ValueError("A plugin called \'" + name + "\' already exists.")
 
     cameras[name] = plugin
 
@@ -63,7 +63,8 @@ def load_camera_plugins(cameras_folder):
         imp.load_source(os.path.basename(p).rstrip(".py"), p)
 
     if len(cameras.keys()) == 0:
-        raise RuntimeError, "No camera plugins found in \'" + cameras_folder + "/*.py\'"
+        raise RuntimeError(
+            "No camera plugins found in \'" + cameras_folder + "/*.py\'")
 
 
 def clear_plugins_list():
@@ -97,7 +98,7 @@ class CameraManagerBase(ThreadQueueBase):
         try:
             # check that camera is connected
             if not self.is_connected():
-                raise GphotoError, "No camera detected"
+                raise GphotoError("No camera detected")
 
             if settings_manager.get(['camera_full_auto_clear'])['camera_full_auto_clear']:
                 settings_manager.set(
@@ -199,7 +200,7 @@ class CameraManagerBase(ThreadQueueBase):
         setting the camera to capture all the different image types required by the
         outputs defined for the capture mode.
         """
-        raise AttributeError, "CameraManagerBase must be sub-classed"
+        raise AttributeError("CameraManagerBase must be sub-classed")
 
     ##########################################################################
 
@@ -213,7 +214,7 @@ class CameraManagerBase(ThreadQueueBase):
         is entirely up to you, provided that you write a PASKIL plugin to read it
         (see the PASKIL.allskyImagePlugins module for details).
         """
-        raise AttributeError, "CameraManagerBase must be sub-classed"
+        raise AttributeError("CameraManagerBase must be sub-classed")
 
     ##########################################################################
 
@@ -222,7 +223,7 @@ class CameraManagerBase(ThreadQueueBase):
         This method should clear all images from the camera. If it is not possible with
         your camera, then it should just return without error.
         """
-        raise AttributeError, "CameraManagerBase must be sub-classed"
+        raise AttributeError("CameraManagerBase must be sub-classed")
 
     ##########################################################################
 
@@ -230,7 +231,7 @@ class CameraManagerBase(ThreadQueueBase):
         """
         Method should return True if the camera is connected, False otherwise.
         """
-        raise AttributeError, "CameraManagerBase must be sub-classed"
+        raise AttributeError("CameraManagerBase must be sub-classed")
 
     ##########################################################################
     def _download_configs(self):
@@ -240,7 +241,7 @@ class CameraManagerBase(ThreadQueueBase):
         the configs, and must be identical to the names used in the settings file
         for the configs.
         """
-        raise AttributeError, "CameraManagerBase must be sub-classed"
+        raise AttributeError("CameraManagerBase must be sub-classed")
 
     ##########################################################################
 ##########################################################################
@@ -263,7 +264,8 @@ class GphotoCameraManager(CameraManagerBase):
         p = Popen("gphoto2 -l", shell=True, stdout=PIPE)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Unable to download the list of folders"
+            raise GphotoError(
+                "Gphoto2 Error: Unable to download the list of folders")
 
         # read output lines from pipe
         lines = p.stdout.readlines()
@@ -306,7 +308,8 @@ class GphotoCameraManager(CameraManagerBase):
         try:
             config = self.camera_configs[name]
         except KeyError:
-            raise GphotoError, "\'" + name + "\'" + " is not a valid config name for this camera. (Although it is possible that it was simply not downloaded from the camera during initialisation). Use \'gphoto2 --list-config\' to check that the requested config actually exists."
+            raise GphotoError(
+                "\'" + name + "\'" + " is not a valid config name for this camera. (Although it is possible that it was simply not downloaded from the camera during initialisation). Use \'gphoto2 --list-config\' to check that the requested config actually exists.")
 
         # Since some of the keys on the new Sony alpha 7s are ranges or
         # fractions they are not in the dictionary
@@ -322,7 +325,7 @@ class GphotoCameraManager(CameraManagerBase):
         p.wait()
 
         if p.returncode != 0:
-            raise GphotoError, "GPhoto2 Error: failed to set config" + name
+            raise GphotoError("GPhoto2 Error: failed to set config" + name)
 
         # update the camera_configs attribute to reflect the change.
         self.camera_configs[name].current = value
@@ -348,7 +351,8 @@ class GphotoCameraManager(CameraManagerBase):
         outerr = p.stderr.read()
 
         if p.returncode != 0:
-            raise GphotoError, "GPhoto2 Error: failed to auto detect\n" + outerr
+            raise GphotoError(
+                "GPhoto2 Error: failed to auto detect\n" + outerr)
 
         # split output into lines and see how many lines there were in the list
         # to determine if the camera was present or not.
@@ -368,7 +372,8 @@ class GphotoCameraManager(CameraManagerBase):
         p.wait()
 
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Unable to delete the image(s) from camera card"
+            raise GphotoError(
+                "Gphoto2 Error: Unable to delete the image(s) from camera card")
 
     ##########################################################################
 
@@ -400,7 +405,8 @@ class GphotoCameraManager(CameraManagerBase):
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Failed to capture and download image"
+            raise GphotoError(
+                "Gphoto2 Error: Failed to capture and download image")
 
         return time_of_capture
     ##########################################################################
@@ -433,7 +439,8 @@ class GphotoCameraManager(CameraManagerBase):
         p = Popen("gphoto2 -L ", shell=True, stdout=PIPE)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Unable to list of files on camera card"
+            raise GphotoError(
+                "Gphoto2 Error: Unable to list of files on camera card")
 
         # read the lines of output from the gphoto command
         pre_image_list = p.stdout.readlines()
@@ -446,7 +453,7 @@ class GphotoCameraManager(CameraManagerBase):
         p = Popen("gphoto2 --capture-image ", shell=True)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Failed to capture image"
+            raise GphotoError("Gphoto2 Error: Failed to capture image")
 
         # wait for the image to be stored for up to one minute
         flag = False
@@ -459,7 +466,8 @@ class GphotoCameraManager(CameraManagerBase):
             p = Popen("gphoto2 -L ", shell=True, stdout=PIPE)
             p.wait()
             if p.returncode != 0:
-                raise GphotoError, "Gphoto2 Error: Unable to list of files on camera card"
+                raise GphotoError(
+                    "Gphoto2 Error: Unable to list of files on camera card")
 
             post_image_list = p.stdout.readlines()
             # compare the new list of files to the one recorded before taking a picture
@@ -507,7 +515,7 @@ class GphotoCameraManager(CameraManagerBase):
         if not flag:
             # it has taken more than one minute to store the image - something
             # has probably gone wrong!
-            raise GphotoError, "Gphoto2 Error: Unable to download image(s)"
+            raise GphotoError("Gphoto2 Error: Unable to download image(s)")
         else:
             return active_folder, time_of_capture
 
@@ -528,7 +536,8 @@ class GphotoCameraManager(CameraManagerBase):
                   'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Unable to copy the photos from the camera card"
+            raise GphotoError(
+                "Gphoto2 Error: Unable to copy the photos from the camera card")
 
     ##########################################################################
 
@@ -544,7 +553,8 @@ class GphotoCameraManager(CameraManagerBase):
         p = Popen("gphoto2 --list-config", shell=True, stdout=PIPE)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "Gphoto2 Error: Unable to download the list of configs"
+            raise GphotoError(
+                "Gphoto2 Error: Unable to download the list of configs")
 
         # read output lines from pipe
         lines = p.stdout.readlines()
@@ -566,12 +576,12 @@ class GphotoCameraManager(CameraManagerBase):
     ##########################################################################
 
     def _set_capture_mode(self, capture_mode):
-        raise AttributeError, "gphotoCameraManager must be sub-classed"
+        raise AttributeError("gphotoCameraManager must be sub-classed")
 
     ##########################################################################
 
     def _capture_images(self):
-        raise AttributeError, "gphotoCameraManager must be sub-classed"
+        raise AttributeError("gphotoCameraManager must be sub-classed")
 
     ##########################################################################
 
@@ -590,7 +600,8 @@ class GphotoCameraManager(CameraManagerBase):
                   shell=True, stdout=PIPE, stderr=PIPE)
         p.wait()
         if p.returncode != 0:
-            raise GphotoError, "GPhoto2 Error: failed to download config" + name
+            raise GphotoError(
+                "GPhoto2 Error: failed to download config" + name)
 
         # read config value lines from pipe
         config_lines = p.stdout.readlines()
