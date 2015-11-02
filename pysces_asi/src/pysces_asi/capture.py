@@ -25,7 +25,7 @@ The CaptureManager also creates a HostManager object and uses this to update the
 folder structure on the host before each image is captured.
 """
 import traceback
-import queue
+import Queue
 import datetime
 import time
 import os
