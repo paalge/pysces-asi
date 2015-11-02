@@ -52,14 +52,14 @@ output_function_files = [
 output_function_files.append("README")  # add the readme file to it as well
 
 setup(name='pysces_asi',
-      version='2.0',
+      version='2.1',
       description='All-sky camera control script',
       author='Nial Peters',
       author_email='nonbiostudent@hotmail.com',
       url='http://code.google.com/p/pysces-asi/',
       package_dir={'': 'src'},
       packages=['pysces_asi'],
-      scripts=['misc/pysces_asi', 'pysces_asi3'],
+      scripts=['misc/pysces_asi', 'misc/pysces_asi3'],
       data_files=[(pysces_rw_folder, ['misc/template_settings.txt']),
                   (pysces_rw_folder + "/tasks.daily",
                    ["misc/tasks.daily/README"]),
