@@ -56,16 +56,16 @@ To install pysces_asi:
         
 The setup script will install the pysces_asi module into the 
 site-packages directory of your Python distribution. It will also
-install an executable "pysces_asi" into (probably) /usr/bin. Finally,
-it will create a read/write folder for pysces_asi to use in your home
-folder called ".pysces_asi". The settings file that controls 
-pysces_asi's operation will be installed into this read/write folder
+install an executable "pysces_asi" (and "pysces_asi3 for python3) into 
+(probably) /usr/bin. Finally,it will create a read/write folder for 
+pysces_asi to use in your home folder called ".pysces_asi". The settings file 
+that controls pysces_asi's operation will be installed into this read/write folder
 and you should edit it before running the main program.
 
 
                        ## USING PYSCES_ASI ##
                        
-pysces_asi is controlled by editing the settings file, 
+pysces_asi / pysces_asi3 is controlled by editing the settings file, 
 "~/.pysces_asi/settings.txt". This file is well commented, and should
 be self explanatory. After completing the settings file simply run the
 command "pysces_asi" in a terminal. If all goes well, a graphical 

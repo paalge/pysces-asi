@@ -319,7 +319,6 @@ class GphotoCameraManager(CameraManagerBase):
             value_index = value
 
         # run gphoto function in separate process
-
         p = Popen(
             "gphoto2 --set-config " + str(name) + "=" + str(value_index), shell=True)
         p.wait()

@@ -27,7 +27,7 @@ import time
 import traceback
 import multiprocessing
 
-from queue import Queue
+from Queue import Queue
 from threading import Event, Thread, currentThread
 
 
@@ -162,7 +162,8 @@ class ThreadQueueBase:
         # encountered will be ignored
         for thread in self._workers:
             if not thread.isAlive():
-                print("### Error! ### Worker thread in " + self.name + " has died!")
+                print(
+                    "### Error! ### Worker thread in " + self.name + " has died!")
                 raise RuntimeError(
                     "### Error! ### Worker thread in " + self.name + " has died!")
 
@@ -267,7 +268,8 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                print("Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
+                print(
+                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
                 self._input_queue.put(task)
                 continue
 
@@ -306,7 +308,8 @@ class ProcessQueueBase:
         with task completion.
         """
         if not self._input_thread.isAlive():
-            print("### Error! ### Worker thread in " + self.name + " has died!")
+            print(
+                "### Error! ### Worker thread in " + self.name + " has died!")
             raise RuntimeError(
                 "### Error! ### Worker thread in " + self.name + " has died!")
         self._input_queue.put(task)

@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+# Script to run graphical version of pysces_asi in python3
+
+from pysces_asi import GUI
+import wx
+
+# setup app
+app = wx.PySimpleApp()
+
+frame = GUI.MainFrame()
+frame.Show()
+
+app.MainLoop()
