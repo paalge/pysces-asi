@@ -158,7 +158,7 @@ class CaptureManager(ThreadQueueBase):
                             self._output_task_handler.commit_task(
                                 output_tasks[i])
                             i += 1
-                        except queue.Full:
+                        except Queue.Full:
                             # the outputTaskHandler is busy, wait for a bit and
                             # then retry
                             if flag:
@@ -190,7 +190,7 @@ class CaptureManager(ThreadQueueBase):
                     if hasattr(capture_mode, "top_of_min"):
                         top_of_min_wait = capture_mode.top_of_min
                     continue
-                except queue.Empty:
+                except Queue.Empty:
                     # no new capture modes have come in, so we just continue
                     # with the one we have got
                     top_of_min_wait = False
