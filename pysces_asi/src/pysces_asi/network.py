@@ -201,7 +201,7 @@ class NetworkManager(ThreadQueueBase):
                 fp.write(
                     "echo \"### Password required to mount web server ###\"\n")
                 fp.write("sudo mount -t cifs \"" + glob_vars[
-                         'web_server'] + "\" \"" + self._mount_point + "\" -o uid=1000,gid=1000,user=\"" + glob_vars['web_username'] + "\", rw,\n")
+                         'web_server'] + "\" \"" + self._mount_point + "\" -o uid=1000,gid=1000,user=\"" + glob_vars['web_username'] + "\"\n")
 
                 fp.write("read -p \"Press any key to continue....\"")
 
