@@ -402,7 +402,10 @@ class GphotoCameraManager(CameraManagerBase):
         p = Popen(
             "gphoto2 --debug --debug-logfile=~/.gphoto2_log --capture-image-and-download --filename \"" + glob_vars[
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)
-        p.wait()
+        # Wait and print errors
+        print(p.communicate(None))
+        # Check that it is finished
+        p.poll()
         if p.returncode != 0:
             raise GphotoError(
                 "Gphoto2 Error: Failed to capture and download image")
