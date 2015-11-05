@@ -397,10 +397,10 @@ class GphotoCameraManager(CameraManagerBase):
             {"output": "CameraManager> Capturing image and downloading."})
 
         glob_vars = self._settings_manager.get(['tmp dir'])
-        print(("gphoto2 --capture-image-and-download --filename \"" + glob_vars[
+        print(("gphoto2 --debug --debug-logfile=my-logfile.txt --capture-image-and-download --filename \"" + glob_vars[
             'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\""))
         p = Popen(
-            "gphoto2 --capture-image-and-download --filename \"" + glob_vars[
+            "gphoto2 --debug --debug-logfile=~/.gphoto2_log --capture-image-and-download --filename \"" + glob_vars[
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\"", shell=True)
         p.wait()
         if p.returncode != 0:
