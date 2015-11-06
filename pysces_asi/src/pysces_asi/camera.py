@@ -319,8 +319,10 @@ class GphotoCameraManager(CameraManagerBase):
             value_index = value
 
         # run gphoto function in separate process
-        p = Popen(
-            "gphoto2 --set-config-value " + str(name) + "=" + str(value_index), shell=True)
+        s_cmd = "gphoto2 --set-config-value " + \
+            str(name) + "=" + str(value_index)
+        print(s_cmd)
+        p = Popen(s_cmd, shell=True)
         p.wait()
 
         if p.returncode != 0:
@@ -399,7 +401,7 @@ class GphotoCameraManager(CameraManagerBase):
         glob_vars = self._settings_manager.get(['tmp dir'])
 #         print(("gphoto2 --debug --debug-logfile=~/.gphoto2_log --capture-image-and-download --filename \"" + glob_vars[
 #             'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\""))
-        g_cmd = "gphoto2 --debug --debug-logfile=~/.gphoto2_log --capture-image-and-download --filename \"" + glob_vars[
+        g_cmd = "gphoto2 --capture-image-and-download --filename \"" + glob_vars[
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\""
         print(g_cmd)
         try:
