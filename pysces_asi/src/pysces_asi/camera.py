@@ -320,7 +320,7 @@ class GphotoCameraManager(CameraManagerBase):
 
         # run gphoto function in separate process
         p = Popen(
-            "gphoto2 --set-config " + str(name) + "=" + str(value_index), shell=True)
+            "gphoto2 --set-config-value " + str(name) + "=" + str(value_index), shell=True)
         p.wait()
 
         if p.returncode != 0:

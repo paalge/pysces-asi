@@ -38,6 +38,13 @@ except ImportError:
     raise ImportError(
         "Could not import PASKIL. Please ensure it is installed correctly. See http://code.google.com/p/paskil/")
 
+try:
+    from subprocess32 import *
+except ImportError:
+    raise ImportError(
+        "Could not import subprocess32. Please ensure it is installed correctly.")
+
+
 # Find out where the home folder is
 home_folder = os.path.expandvars("$HOME")
 pysces_rw_folder = os.path.normpath(home_folder + '/.pysces_asi')
