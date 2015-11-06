@@ -321,12 +321,12 @@ class GphotoCameraManager(CameraManagerBase):
         # run gphoto function in separate process
         s_cmd = "gphoto2 --set-config-value " + \
             str(name) + "=" + str(value_index)
-        print(s_cmd)
         p = Popen(s_cmd, shell=True)
         p.wait()
 
         if p.returncode != 0:
-            raise GphotoError("GPhoto2 Error: failed to set config" + name)
+            raise GphotoError(
+                "GPhoto2 Error: failed to set config" + name + "\n Command: " + s_cmd)
 
         # update the camera_configs attribute to reflect the change.
         self.camera_configs[name].current = value
@@ -409,7 +409,7 @@ class GphotoCameraManager(CameraManagerBase):
             print(output)
         except CalledProcessError:
             raise GphotoError(
-                "Gphoto2 Error: Failed to capture and download image")
+                "Gphoto2 Error: Failed to capture and download image + \n Command:" + g_cmd)
         # Wait and print errors
         return time_of_capture
     ##########################################################################
