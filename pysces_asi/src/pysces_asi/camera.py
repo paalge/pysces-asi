@@ -313,10 +313,10 @@ class GphotoCameraManager(CameraManagerBase):
 
         # Since some of the keys on the new Sony alpha 7s are ranges or
         # fractions they are not in the dictionary
-        try:
-            value_index = config.values[value]
-        except KeyError:
-            value_index = value
+#         try:
+#             value_index = config.values[value]
+#         except KeyError:
+        value_index = value
 
         # run gphoto function in separate process
         s_cmd = "gphoto2 --set-config-value " + \
