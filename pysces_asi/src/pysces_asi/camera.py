@@ -299,10 +299,10 @@ class GphotoCameraManager(CameraManagerBase):
         p = call_shell("gphoto2 -l", 30,
                        error_text="Gphoto2 Error: Unable to download the list of folders")
         # read output lines from pipe
-        lines = p.readlines()
+        lines = p.stdout.readlines()
 
         # get the current and possible values for all the different configs
-        for folder in lines:
+        for folder in lines.split(:
             folder = folder.lstrip().rstrip()
             # skip blank lines
             if folder.isspace() or folder == "":
@@ -374,7 +374,7 @@ class GphotoCameraManager(CameraManagerBase):
             "gphoto2 --auto-detect", 30, error_text="GPhoto2 Error: failed to auto detect")
 
         # read the output from the pipes
-        out = p.readlines()
+        out = p.stdout.readlines()
 
         # split output into lines and see how many lines there were in the list
         # to determine if the camera was present or not.
@@ -467,7 +467,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="Gphoto2 Error: Unable to list of files on camera card")
 
         # read the lines of output from the gphoto command
-        pre_image_list = p.readlines()
+        pre_image_list = p.stdout.readlines()
 
         # take the picture!
         time_of_capture = datetime.datetime.utcnow()
@@ -488,7 +488,7 @@ class GphotoCameraManager(CameraManagerBase):
             p = call_shell(
                 "gphoto2 -L ", timeout=10, error_text="Gphoto2 Error: Unable to list of files on camera card")
 
-            post_image_list = p.readlines()
+            post_image_list = p.stdout.readlines()
             # compare the new list of files to the one recorded before taking a picture
             # and work out how many new files have appeared and what folder they have
             # appeared in
@@ -571,7 +571,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="Gphoto2 Error: Unable to download the list of configs")
 
         # read output lines from pipe
-        lines = p.readlines()
+        lines = p.stdout.readlines()
 
         # get the current and possible values for all the different configs
         for config in lines:
@@ -614,7 +614,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="GPhoto2 Error: failed to download config" + name)
 
         # read config value lines from pipe
-        config_lines = p.readlines()
+        config_lines = p.stdout.readlines()
 
         # read the values of the config from the output of the gphoto function
         for line in config_lines:
