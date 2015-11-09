@@ -302,7 +302,7 @@ class GphotoCameraManager(CameraManagerBase):
         lines = p.stdout.readlines()
 
         # get the current and possible values for all the different configs
-        for folder in lines.split(:
+        for folder in lines:
             folder = folder.lstrip().rstrip()
             # skip blank lines
             if folder.isspace() or folder == "":
