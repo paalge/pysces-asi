@@ -611,7 +611,7 @@ class GphotoCameraManager(CameraManagerBase):
         # get values for particular config
 
         # run gphoto function in separate process
-        p = call_shell("gphoto2 --get-config ", timeout=20,
+        p = call_shell("gphoto2 --get-config " + name, timeout=20,
                        error_text="GPhoto2 Error: failed to download config" + name)
 
         # read config value lines from pipe
@@ -619,7 +619,6 @@ class GphotoCameraManager(CameraManagerBase):
 
         # read the values of the config from the output of the gphoto function
         for line in config_lines:
-            print(line)
             if line.isspace() or line == "":
                 continue
 
