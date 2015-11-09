@@ -619,6 +619,7 @@ class GphotoCameraManager(CameraManagerBase):
 
         # read the values of the config from the output of the gphoto function
         for line in config_lines:
+            print(line)
             if line.isspace() or line == "":
                 continue
 
