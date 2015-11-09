@@ -489,7 +489,7 @@ class GphotoCameraManager(CameraManagerBase):
             p = call_shell(
                 "gphoto2 -L ", timeout=10, error_text="Gphoto2 Error: Unable to list of files on camera card")
 
-            post_image_list = p.splitlines())
+            post_image_list = p.splitlines()
             # compare the new list of files to the one recorded before taking a picture
             # and work out how many new files have appeared and what folder they have
             # appeared in
