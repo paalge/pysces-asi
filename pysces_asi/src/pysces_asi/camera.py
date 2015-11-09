@@ -90,18 +90,19 @@ def call_shell(command, timeout, error_text, output_stderr=False):
 
     output_stderr : Flag for choosing if the stderr should be sendt to the 
                     stdout, default False
-            boolean
+          boolean
 
     Returns:
     ----------
     stdout : the stdout
+          str
     """
 
     try:
         if output_stderr:
             output = qx(command, shell=True, stderr=STDOUT, timeout=timeout)
         else:
-            output = qx(command, shell=True, stderr=STDOUT, timeout=timeout)
+            output = qx(command, shell=True, timeout=timeout)
     except CalledProcessError:
         raise GphotoError(
             error_text + " \n Command:" + command)
@@ -299,7 +300,7 @@ class GphotoCameraManager(CameraManagerBase):
         p = call_shell("gphoto2 -l", 30,
                        error_text="Gphoto2 Error: Unable to download the list of folders")
         # read output lines from pipe
-        lines = p.stdout.readlines()
+        lines = p.splitlines()
 
         # get the current and possible values for all the different configs
         for folder in lines:
@@ -374,7 +375,7 @@ class GphotoCameraManager(CameraManagerBase):
             "gphoto2 --auto-detect", 30, error_text="GPhoto2 Error: failed to auto detect")
 
         # read the output from the pipes
-        out = p.stdout.readlines()
+        out = p.splitlines()
 
         # split output into lines and see how many lines there were in the list
         # to determine if the camera was present or not.
@@ -467,7 +468,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="Gphoto2 Error: Unable to list of files on camera card")
 
         # read the lines of output from the gphoto command
-        pre_image_list = p.stdout.readlines()
+        pre_image_list = p.splitlines()
 
         # take the picture!
         time_of_capture = datetime.datetime.utcnow()
@@ -488,7 +489,7 @@ class GphotoCameraManager(CameraManagerBase):
             p = call_shell(
                 "gphoto2 -L ", timeout=10, error_text="Gphoto2 Error: Unable to list of files on camera card")
 
-            post_image_list = p.stdout.readlines()
+            post_image_list = p.splitlines())
             # compare the new list of files to the one recorded before taking a picture
             # and work out how many new files have appeared and what folder they have
             # appeared in
@@ -571,7 +572,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="Gphoto2 Error: Unable to download the list of configs")
 
         # read output lines from pipe
-        lines = p.stdout.readlines()
+        lines = p.splitlines()
 
         # get the current and possible values for all the different configs
         for config in lines:
@@ -614,7 +615,7 @@ class GphotoCameraManager(CameraManagerBase):
                        error_text="GPhoto2 Error: failed to download config" + name)
 
         # read config value lines from pipe
-        config_lines = p.stdout.readlines()
+        config_lines = p.splitlines()
 
         # read the values of the config from the output of the gphoto function
         for line in config_lines:
