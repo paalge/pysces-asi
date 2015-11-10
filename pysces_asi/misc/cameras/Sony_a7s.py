@@ -141,7 +141,7 @@ class A7SCameraManager(GphotoCameraManager):
             with open(info_filename, "wb") as fp:
                 pickle.dump(info, fp)
 
-            new_images["are"] = (image_filename, info_filename)
+            new_images["arw"] = (image_filename, info_filename)
 
         if get_jpeg:
             info = self._build_PASKIL_info("jpeg", time_of_capture, glob_vars)

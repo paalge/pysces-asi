@@ -459,11 +459,6 @@ class GphotoCameraManager(CameraManagerBase):
         """
         # get list of files on camera before capture
         # run gphoto function in separate process and wait for it to finish
-
-        g_cmd = "gphoto2 -D --folder=" + active_folder
-        call_shell(
-            g_cmd, timeout=30, error_text="Gphoto2 Error: Unable to delete the image(s) from camera card")
-
         p = call_shell("gphoto2 -L ", timeout=30,
                        error_text="Gphoto2 Error: Unable to list of files on camera card")
 
