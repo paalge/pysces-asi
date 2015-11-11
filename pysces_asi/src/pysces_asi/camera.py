@@ -428,7 +428,7 @@ class GphotoCameraManager(CameraManagerBase):
         try:
             output = qx(g_cmd, shell=True, stderr=STDOUT, timeout=60)
             print(output)
-            if output.find("ERROR: Could not capture image."):
+            if output.find("ERROR: Could not capture image.")!=-1:
                 call_shell("gphoto2 --reset", timeout=30,error_text="Couldn't reset")
         except CalledProcessError:
             raise GphotoError(
