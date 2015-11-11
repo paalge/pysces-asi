@@ -31,6 +31,7 @@ import glob
 import os.path
 import imp
 from subprocess32 import STDOUT, check_output as qx
+from subprocess32 import CalledProcessError
 
 from pysces_asi.multitask import ThreadQueueBase, ThreadTask
 
@@ -403,7 +404,7 @@ class GphotoCameraManager(CameraManagerBase):
         Captures an image and downloads all the images into the temporary folder
         on the host. The image files are named using the filename format 
         specified in the settings file and the time of capture. This method 
-        has been written in order to incorporate cameraes without the ability
+        has been written in order to incorporate cameras without the ability
         to capture to memory card
         The capture time is a datetime object of the capture time in 
         UT.
@@ -427,6 +428,8 @@ class GphotoCameraManager(CameraManagerBase):
         try:
             output = qx(g_cmd, shell=True, stderr=STDOUT, timeout=60)
             print(output)
+            if output.find("ERROR: Could not capture image."):
+                call_shell("gphoto2 --reset", timeout=30,error_text="Couldn't reset")
         except CalledProcessError:
             raise GphotoError(
                 "Gphoto2 Error: Failed to capture and download image + \n Command:" + g_cmd)
