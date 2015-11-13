@@ -89,7 +89,7 @@ class _NetworkManagerProxy(ThreadQueueBase):
         task = self.create_task(self.__copy_to_server, source, destination)
 
         # submit task
-        self.commit_task(task)
+        self.commit_task(task, timeout=30)
 
         # return result when task has been completed
         return task.result()
@@ -234,7 +234,7 @@ class NetworkManager(ThreadQueueBase):
         task = self.create_task(self._copy_to_server, source, dest)
 
         # submit task
-        self.commit_task(task)
+        self.commit_task(task, timeout=30)
 
         # return result when task has been completed
         return task.result()

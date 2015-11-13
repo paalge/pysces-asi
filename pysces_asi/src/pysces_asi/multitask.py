@@ -152,7 +152,7 @@ class ThreadQueueBase:
 
     ###########################################################################
 
-    def commit_task(self, task):
+    def commit_task(self, task, timeout=None):
         """
         Puts the specified task into the input queue where it will be executed
         by one of the internal worker threads. The task's result() method be
@@ -168,7 +168,7 @@ class ThreadQueueBase:
                     "### Error! ### Worker thread in " + self.name + " has died!")
 
         if self._stay_alive:
-            self._task_queue.put_nowait(task)
+            self._task_queue.put(task, block=False, timeout=timeout)
 
     ###########################################################################
 
