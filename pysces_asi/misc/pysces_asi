@@ -1,14 +1,18 @@
 #!/usr/bin/python
 
-#Script to run graphical version of pysces_asi
+# Script to run graphical version of pysces_asi
 
 from pysces_asi import GUI
 import wx
+import logging
 
-#setup app
-app= wx.PySimpleApp()
-    
+logging.basicConfig(
+    filename='pysces_asi.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
+
+# setup app
+app = wx.PySimpleApp()
+
 frame = GUI.MainFrame()
 frame.Show()
-    
+
 app.MainLoop()
