@@ -82,7 +82,7 @@ class ThreadTask:
         # can be raised in the calling thread, rather than the worker thread.
         except Exception as xxx_todo_changeme:
             self._exception = xxx_todo_changeme
-            log.warn("\nException in thread: " + str(currentThread()))
+            log.warning("\nException in thread: " + str(currentThread()))
             traceback.print_exc()
 
         # set the event to true, to show that the task is finished
@@ -138,7 +138,7 @@ class ThreadQueueBase:
             task = self._task_queue.get()
 
             log.info(
-                "Executing worker task (in ThreadQueueBase): " + str(task))
+                "Executing worker task (in ThreadQueueBase): ")
             # execute the task
             task.execute()
 
@@ -261,7 +261,7 @@ class ProcessQueueBase:
             # have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
             # in a try except block
             log.info(
-                "Executing worker task (in ProcessQueueBase): " + str(task))
+                "Executing worker task (in ProcessQueueBase): ")
             try:
                 # otherwise wait for active process count to fall below max
                 # count
@@ -277,8 +277,8 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                log.warn(
-                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: " + str(task))
+                log.warning(
+                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
                 self._input_queue.put(task)
