@@ -82,7 +82,7 @@ class ThreadTask:
         # can be raised in the calling thread, rather than the worker thread.
         except Exception as xxx_todo_changeme:
             self._exception = xxx_todo_changeme
-            log.info("\nException in thread: " + str(currentThread()))
+            log.warn("\nException in thread: " + str(currentThread()))
             traceback.print_exc()
 
         # set the event to true, to show that the task is finished
@@ -277,7 +277,7 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                log.info(
+                log.warn(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: " + str(task))
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
