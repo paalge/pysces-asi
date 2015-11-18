@@ -39,6 +39,10 @@ from pysces_asi.output_task import create_output_tasks
 from pysces_asi.camera import GphotoError
 from pysces_asi import camera
 
+import logging
+
+log = logging.getLogger("capture")
+
 ##########################################################################
 
 
@@ -141,6 +145,7 @@ class CaptureManager(ThreadQueueBase):
 
                 # RuntimeError is rasied when gphoto fails in the cameraManager
                 except GphotoError as ex:
+                    log.warning("CaptureManager> gphoto fails: " + ex.args[0])
                     self._settings_manager.set(
                         {"output": "CaptureManager> " + ex.args[0]})
                     images = None
@@ -155,6 +160,8 @@ class CaptureManager(ThreadQueueBase):
                     flag = True
                     while i < len(output_tasks):
                         try:
+                            #                             log.info(
+                            #                                 "CaptureManager> Trying to set new OutputTaskHandler")
                             self._output_task_handler.commit_task(
                                 output_tasks[i])
                             i += 1
@@ -162,6 +169,8 @@ class CaptureManager(ThreadQueueBase):
                             # the outputTaskHandler is busy, wait for a bit and
                             # then retry
                             if flag:
+                                log.warning(
+                                    "CaptureManager> Waiting for OutputTaskHandler")
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
                                 flag = False
