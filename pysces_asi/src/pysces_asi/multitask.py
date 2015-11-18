@@ -31,7 +31,7 @@ import logging
 from Queue import Queue
 from threading import Event, Thread, currentThread
 
-log = logging.getLogger()
+log = logging.getLogger("multitask")
 
 
 class RemoteTask:
@@ -277,7 +277,7 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                log.warning(
+                log.info(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
