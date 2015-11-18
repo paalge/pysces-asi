@@ -294,6 +294,7 @@ class ProcessQueueBase:
                     p.start()
                     not_started = False
                 except OSError:
+                    log.warning("OSError: ")
                     self._active_processes.remove(p)
                     self._process_count = self._process_count - 1
 
