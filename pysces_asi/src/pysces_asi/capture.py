@@ -145,6 +145,7 @@ class CaptureManager(ThreadQueueBase):
 
                 # RuntimeError is rasied when gphoto fails in the cameraManager
                 except GphotoError as ex:
+                    log.warn("CaptureManager> gphoto fails: " + ex.args[0])
                     self._settings_manager.set(
                         {"output": "CaptureManager> " + ex.args[0]})
                     images = None
@@ -168,6 +169,8 @@ class CaptureManager(ThreadQueueBase):
                             # the outputTaskHandler is busy, wait for a bit and
                             # then retry
                             if flag:
+                                log.warn(
+                                    "CaptureManager> Waiting for OutputTaskHandler")
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
                                 flag = False
