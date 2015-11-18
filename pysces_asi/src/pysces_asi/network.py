@@ -27,10 +27,13 @@ import stat
 import shutil
 
 import multiprocessing
+import logging
 from threading import Thread
 from subprocess import Popen, PIPE
 
 from pysces_asi.multitask import ThreadQueueBase, RemoteTask
+
+log = logging.getLogger()
 
 
 class _NetworkManagerProxy(ThreadQueueBase):
@@ -138,6 +141,7 @@ class NetworkManager(ThreadQueueBase):
                          "destroy proxy": self._commit_destroy_proxy}
 
         # self._manager.Queue()
+
         self._remote_input_queue = multiprocessing.Queue()
         self._output_queues = {}
 

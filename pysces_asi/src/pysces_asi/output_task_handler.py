@@ -22,6 +22,7 @@ degree of parallelism will scale automatically with the number of available
 CPUs.
 """
 import multiprocessing
+import logging
 import threading
 import os.path
 import imp
@@ -31,6 +32,8 @@ from pysces_asi import network
 from pysces_asi.multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
 from pysces_asi.output_task import OutputTask, output_functions
 from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
+
+log = logging.getLogger()
 
 
 def register(name, plugin):
@@ -169,10 +172,13 @@ class OutputTaskHandler(ThreadQueueBase):
             else:
                 self.__pipelined_lock.release()
                 # if this happens then something has gone seriously wrong!
-                print("**error**" + str(type(output_task)) + " is neither a ThreadTask nor an OutputTask and cannot be executed" + " by the OutputTaskHandler.")
+                print("**error**" + str(type(output_task)) +
+                      " is neither a ThreadTask nor an OutputTask and cannot be executed" + " by the OutputTaskHandler.")
                 print("output_task = ", output_task)
-                print("comparison = ", isinstance(output_task, type(OutputTask)))
-                print("type comparison = ", (type(output_task) is type(OutputTask)))
+                print(
+                    "comparison = ", isinstance(output_task, type(OutputTask)))
+                print(
+                    "type comparison = ", (type(output_task) is type(OutputTask)))
                 print(dir(output_task))
                 raise TypeError
         self._exit_event.set()
@@ -194,7 +200,8 @@ class OutputTaskHandler(ThreadQueueBase):
             if thread.isAlive():
                 flag = True
             if not flag:
-                print("### Error! ### Worker thread in " + self.name + " has died!")
+                print(
+                    "### Error! ### Worker thread in " + self.name + " has died!")
                 raise RuntimeError(
                     "### Error! ### Worker thread in " + self.name + " has died!")
 

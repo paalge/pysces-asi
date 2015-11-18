@@ -155,6 +155,8 @@ class CaptureManager(ThreadQueueBase):
                     flag = True
                     while i < len(output_tasks):
                         try:
+                            self._settings_manager.set(
+                                {"output": "CaptureManager> Trying to set new OutputTaskHandler"})
                             self._output_task_handler.commit_task(
                                 output_tasks[i])
                             i += 1
