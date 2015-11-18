@@ -31,7 +31,8 @@ import logging
 from Queue import Queue
 from threading import Event, Thread, currentThread
 
-log = logging.getLogger()
+log = logging.getLogger("multitask")
+
 
 
 class RemoteTask:
@@ -75,14 +76,14 @@ class ThreadTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            log.info("Executing task: " + str(currentThread()))
+            #             log.info("Executing task: " + str(currentThread()))
             self._return_value = self._function(*self._args, **self._kwargs)
 
         # catch any exceptions that were raised during execution so that they
         # can be raised in the calling thread, rather than the worker thread.
         except Exception as xxx_todo_changeme:
             self._exception = xxx_todo_changeme
-            log.warn("\nException in thread: " + str(currentThread()))
+            log.warning("\nException in thread: " + str(currentThread()))
             traceback.print_exc()
 
         # set the event to true, to show that the task is finished
@@ -137,8 +138,9 @@ class ThreadQueueBase:
 
             task = self._task_queue.get()
 
-            log.info(
-                "Executing worker task (in ThreadQueueBase): " + str(task))
+
+#             log.info(
+#                 "Executing worker task (in ThreadQueueBase): ")
             # execute the task
             task.execute()
 
@@ -260,8 +262,9 @@ class ProcessQueueBase:
             # a OSError "No child processes" during the following bit of code. This *might*
             # have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
             # in a try except block
-            log.info(
-                "Executing worker task (in ProcessQueueBase): " + str(task))
+
+#             log.info(
+#                 "Executing worker task (in ProcessQueueBase): ")
             try:
                 # otherwise wait for active process count to fall below max
                 # count
@@ -277,8 +280,9 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                log.warn(
-                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: " + str(task))
+
+                log.warning(
+                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
                 self._input_queue.put(task)
@@ -294,6 +298,7 @@ class ProcessQueueBase:
                     p.start()
                     not_started = False
                 except OSError:
+                    log.warning("OSError: ")
                     self._active_processes.remove(p)
                     self._process_count = self._process_count - 1
 
@@ -368,7 +373,7 @@ class ProcessTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            log.info("Excecute task in ProcessTask")
+            #             log.info("Excecute task in ProcessTask")
             self.return_queue.put(self._function(*self._args,
                                                  **self._kwargs))
 

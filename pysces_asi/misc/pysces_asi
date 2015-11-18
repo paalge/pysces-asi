@@ -7,7 +7,7 @@ import wx
 import logging
 
 logging.basicConfig(
-    filename='pysces_asi.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
+    filename='pysces_asi.log', format='%(asctime)s - %(name)s -  %(levelname)s - %(message)s', level=logging.DEBUG)
 
 # setup app
 app = wx.PySimpleApp()
