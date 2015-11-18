@@ -75,7 +75,7 @@ class ThreadTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            log.info("Executing task: " + str(currentThread()))
+            #             log.info("Executing task: " + str(currentThread()))
             self._return_value = self._function(*self._args, **self._kwargs)
 
         # catch any exceptions that were raised during execution so that they
@@ -137,8 +137,8 @@ class ThreadQueueBase:
 
             task = self._task_queue.get()
 
-            log.info(
-                "Executing worker task (in ThreadQueueBase): ")
+#             log.info(
+#                 "Executing worker task (in ThreadQueueBase): ")
             # execute the task
             task.execute()
 
@@ -260,8 +260,8 @@ class ProcessQueueBase:
             # a OSError "No child processes" during the following bit of code. This *might*
             # have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
             # in a try except block
-            log.info(
-                "Executing worker task (in ProcessQueueBase): ")
+#             log.info(
+#                 "Executing worker task (in ProcessQueueBase): ")
             try:
                 # otherwise wait for active process count to fall below max
                 # count
@@ -277,7 +277,7 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-                log.info(
+                log.warning(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
@@ -368,7 +368,7 @@ class ProcessTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            log.info("Excecute task in ProcessTask")
+            #             log.info("Excecute task in ProcessTask")
             self.return_queue.put(self._function(*self._args,
                                                  **self._kwargs))
 
