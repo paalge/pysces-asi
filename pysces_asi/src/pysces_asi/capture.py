@@ -39,6 +39,10 @@ from pysces_asi.output_task import create_output_tasks
 from pysces_asi.camera import GphotoError
 from pysces_asi import camera
 
+import logging
+
+log = logging.getLogger()
+
 ##########################################################################
 
 
