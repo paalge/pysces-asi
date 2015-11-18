@@ -34,6 +34,7 @@ from threading import Event, Thread, currentThread
 log = logging.getLogger("multitask")
 
 
+
 class RemoteTask:
     """
     Represents a task created by a proxy object that must be executed by the
@@ -75,14 +76,22 @@ class ThreadTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
+<<<<<<< HEAD
             #             log.info("Executing task: " + str(currentThread()))
+=======
+            log.info("Executing task: " + str(currentThread()))
+>>>>>>> refs/heads/master
             self._return_value = self._function(*self._args, **self._kwargs)
 
         # catch any exceptions that were raised during execution so that they
         # can be raised in the calling thread, rather than the worker thread.
         except Exception as xxx_todo_changeme:
             self._exception = xxx_todo_changeme
+<<<<<<< HEAD
             log.warning("\nException in thread: " + str(currentThread()))
+=======
+            log.warn("\nException in thread: " + str(currentThread()))
+>>>>>>> refs/heads/master
             traceback.print_exc()
 
         # set the event to true, to show that the task is finished
@@ -137,8 +146,13 @@ class ThreadQueueBase:
 
             task = self._task_queue.get()
 
+<<<<<<< HEAD
 #             log.info(
 #                 "Executing worker task (in ThreadQueueBase): ")
+=======
+            log.info(
+                "Executing worker task (in ThreadQueueBase): " + str(task))
+>>>>>>> refs/heads/master
             # execute the task
             task.execute()
 
@@ -260,8 +274,13 @@ class ProcessQueueBase:
             # a OSError "No child processes" during the following bit of code. This *might*
             # have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
             # in a try except block
+<<<<<<< HEAD
 #             log.info(
 #                 "Executing worker task (in ProcessQueueBase): ")
+=======
+            log.info(
+                "Executing worker task (in ProcessQueueBase): " + str(task))
+>>>>>>> refs/heads/master
             try:
                 # otherwise wait for active process count to fall below max
                 # count
@@ -277,8 +296,13 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
+<<<<<<< HEAD
                 log.warning(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
+=======
+                log.warn(
+                    "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: " + str(task))
+>>>>>>> refs/heads/master
                 print(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.")
                 self._input_queue.put(task)
@@ -369,7 +393,11 @@ class ProcessTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
+<<<<<<< HEAD
             #             log.info("Excecute task in ProcessTask")
+=======
+            log.info("Excecute task in ProcessTask")
+>>>>>>> refs/heads/master
             self.return_queue.put(self._function(*self._args,
                                                  **self._kwargs))
 
