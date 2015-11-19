@@ -33,7 +33,7 @@ from pysces_asi.multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
 from pysces_asi.output_task import OutputTask, output_functions
 from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
 
-log = logging.getLogger()
+log = logging.getLogger("task_handler")
 
 
 def register(name, plugin):
@@ -131,6 +131,7 @@ class OutputTaskHandler(ThreadQueueBase):
             # grab the pipelined lock - this ensures that pipelined subtasks are put into the
             # piplined processing queue in the same order as they are taken out
             # of this queue
+            log.info("locking pipeline")
             self.__pipelined_lock.acquire()
 
             # pull an outputTask out of the queue
@@ -147,6 +148,7 @@ class OutputTaskHandler(ThreadQueueBase):
             elif isinstance(output_task, OutputTask):
 
                 # submit the image file for cron processing
+                log.info("Submitting  image for cron")
                 submit_image_for_cron(
                     output_task.get_image_filename(), self._settings_manager)
 
