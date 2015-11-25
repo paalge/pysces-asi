@@ -22,10 +22,13 @@ for details on producing outputs.
 import os
 import shutil
 import datetime
+import logging
 
 from PASKIL import allskyKeo, allskyPlot
 from pysces_asi.output_task_handler import register
 
+
+log.getLogger("outputs")
 ##########################################################################
 
 
@@ -148,6 +151,7 @@ def realtime_keogram(image, output, settings_manager):
             settings_manager.set(
                 {'user_rt_keo_name': os.path.expanduser('~') + "/realtime_keogram"})
     else:
+        log.info("Opening keogram")
         keo = allskyKeo.load(filename)
 
         settings_manager.set(
