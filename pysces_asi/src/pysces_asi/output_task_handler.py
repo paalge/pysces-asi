@@ -159,18 +159,19 @@ class OutputTaskHandler(ThreadQueueBase):
                 timeout = 5
                 # wait for all the subtasks to be executed
                 output_task.wait(timeout)
-
+                log.info("Waiting over")
                 # wait for the CronManager to finish with the image files
                 wait_for_per_image_tasks(
                     output_task.get_image_filename(), self._settings_manager,
                     timeout=timeout)
-
+                log.info("Per image wait over")
                 # remove the temporary files
                 output_task.remove_temp_files()
                 del output_task
 
                 # tell the queue that execution is complete
                 self._task_queue.task_done()
+                log.info("Task done")
 
             else:
                 self.__pipelined_lock.release()
