@@ -205,8 +205,8 @@ class OutputTaskHandler(ThreadQueueBase):
             if not flag:
                 print(
                     "### Error! ### Worker thread in " + self.name + " has died!")
-                raise RuntimeError(
-                    "### Error! ### Worker thread in " + self.name + " has died!")
+#                 raise RuntimeError(
+#                     "### Error! ### Worker thread in " + self.name + " has died!")
 
         if self._stay_alive:
             self._task_queue.put_nowait(task)

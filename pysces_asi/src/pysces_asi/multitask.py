@@ -34,7 +34,6 @@ from threading import Event, Thread, currentThread
 log = logging.getLogger("multitask")
 
 
-
 class RemoteTask:
     """
     Represents a task created by a proxy object that must be executed by the
@@ -173,8 +172,8 @@ class ThreadQueueBase:
             if not thread.isAlive():
                 print(
                     "### Error! ### Worker thread in " + self.name + " has died!")
-                raise RuntimeError(
-                    "### Error! ### Worker thread in " + self.name + " has died!")
+#                 raise RuntimeError(
+#                     "### Error! ### Worker thread in " + self.name + " has died!")
 
         if self._stay_alive:
             self._task_queue.put(task, block=False, timeout=timeout)
@@ -326,9 +325,10 @@ class ProcessQueueBase:
         if not self._input_thread.isAlive():
             print(
                 "### Error! ### Worker thread in " + self.name + " has died!")
-            raise RuntimeError(
-                "### Error! ### Worker thread in " + self.name + " has died!")
-        self._input_queue.put(task)
+#             raise RuntimeError(
+#                 "### Error! ### Worker thread in " + self.name + " has died!")
+        else:
+            self._input_queue.put(task)
 
     ###########################################################################
 
