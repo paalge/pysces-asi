@@ -158,8 +158,7 @@ class OutputTaskHandler(ThreadQueueBase):
                 self.__pipelined_lock.release()
 
                 # wait for all the subtasks to be executed
-                
-                output_task.wait()
+                output_task.wait(15)
 
                 # wait for the CronManager to finish with the image files
                 wait_for_per_image_tasks(

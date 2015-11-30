@@ -238,7 +238,7 @@ class OutputTask:
 
     ##########################################################################
 
-    def wait(self):
+    def wait(self, timeout=None):
 
         # get safe_delete option from the settings manager
         safe_delete = self._settings_manager.get(
@@ -246,7 +246,7 @@ class OutputTask:
 
         self._running_subtasks_lock.acquire()
         while 0 < len(self._running_subtasks):
-            self._running_subtasks[0].completed.wait()
+            self._running_subtasks[0].completed.wait(timeout)
             try:
                 self._running_subtasks[0].result()
             except:
