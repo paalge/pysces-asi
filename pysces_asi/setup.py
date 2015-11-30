@@ -86,7 +86,7 @@ if sys.argv.count('install') != 0:
     you = os.getlogin()
     print("Changing ownership of " + pysces_rw_folder + " to " + you)
     return_code = os.system(
-        "chown -R " + you + ":" + you + " " + pysces_rw_folder)
+        "chown " + you + ":" + you + " " + pysces_rw_folder+"/*")
 
     if return_code != 0:
         print("Error! Failed to change ownership of \"~/.pysces_asi\"")

@@ -129,7 +129,7 @@ class OutputTaskHandler(ThreadQueueBase):
         while self._stay_alive or (not self._task_queue.empty()):
 
             # grab the pipelined lock - this ensures that pipelined subtasks are put into the
-            # piplined processing queue in the same order as they are taken out
+            # pipelined processing queue in the same order as they are taken out
             # of this queue
             log.info("locking pipeline")
             self.__pipelined_lock.acquire()
@@ -138,7 +138,7 @@ class OutputTaskHandler(ThreadQueueBase):
             output_task = self._task_queue.get()
 
             # there is the chance that this could be a ThreadTask object, rather than a
-            # OutputTask object, and we need to be able to excute it.
+            # OutputTask object, and we need to be able to execute it.
             if isinstance(output_task, ThreadTask):
                 self.__pipelined_lock.release()
                 print("output task handler: recieved exit command")
@@ -158,6 +158,7 @@ class OutputTaskHandler(ThreadQueueBase):
                 self.__pipelined_lock.release()
 
                 # wait for all the subtasks to be executed
+                
                 output_task.wait()
 
                 # wait for the CronManager to finish with the image files

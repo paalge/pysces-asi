@@ -373,7 +373,7 @@ class ProcessTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            #             log.info("Excecute task in ProcessTask")
+            #             log.info("Exececute task in ProcessTask")
             self.return_queue.put(self._function(*self._args,
                                                  **self._kwargs))
 

@@ -28,7 +28,7 @@ from PASKIL import allskyKeo, allskyPlot
 from pysces_asi.output_task_handler import register
 
 
-log.getLogger("outputs")
+log=logging.getLogger("outputs")
 ##########################################################################
 
 
@@ -46,6 +46,7 @@ def copy_image(image, output, settings_manager):
     settings_manager.set(
         {"output": "OutputTaskHandler> Copying " + source_path + " to " + dest_path})
     shutil.copyfile(source_path, dest_path)
+    
 
     return None
 
@@ -74,6 +75,7 @@ def centered_image(image, output, settings_manager):
     im = image.binaryMask(output.fov_angle)
     im = im.centerImage()
     im = im.alignNorth(north="geomagnetic", orientation='NWSE')
+    log.info("Made image ")
     return im
 
 ##########################################################################
@@ -123,6 +125,7 @@ def check_keo_compatibility(keo, image, output):
 def realtime_keogram(image, output, settings_manager):
 
     # see if a realtime keogram has been created yet
+    log.info("starting keogram")
     try:
         filename = settings_manager.get(
             ['user_rt_keo_name'])['user_rt_keo_name']
@@ -141,9 +144,10 @@ def realtime_keogram(image, output, settings_manager):
 
         keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width,
                             data_spacing=output.data_spacing, keo_fov_angle=output.fov_angle)
-        keo.save(os.path.expanduser('~') + "/realtime_keogram")
+        
 
         try:
+            keo.save(os.path.expanduser('~') + "/realtime_keogram")
             settings_manager.create('user_rt_keo_name', os.path.expanduser(
                 '~') + "/realtime_keogram", persistant=True)
         except ValueError:
@@ -152,8 +156,10 @@ def realtime_keogram(image, output, settings_manager):
                 {'user_rt_keo_name': os.path.expanduser('~') + "/realtime_keogram"})
     else:
         log.info("Opening keogram")
-        keo = allskyKeo.load(filename)
-
+        try:
+            keo = allskyKeo.load(filename)
+        except e:
+            print(e)
         settings_manager.set(
             {'output': "OutputTaskHandler> Adding image to realtime keogram."})
 
@@ -163,13 +169,17 @@ def realtime_keogram(image, output, settings_manager):
 
         if check_keo_compatibility(keo, image, output):
             keo = keo.roll([image])
-            keo.save(filename)
+            try:
+                keo.save(filename)
+            except :
+                print(e)
         else:
             # some of the settings must have changed - time to start a new
             # keogram
             settings_manager.set(
                 {'user_rt_keo_name': None, 'output': "OutputTaskHandler> New image is not compatible with existing keogram."})
             return realtime_keogram(image, output, settings_manager)
+        log.info("made keogram")
 
     return allskyPlot.plot([keo], size=(9, 3.7))
 
