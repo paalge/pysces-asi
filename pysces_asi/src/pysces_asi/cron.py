@@ -42,7 +42,7 @@ def add_to_dict(d, k, v):
     return d
 
 
-def wait_for_per_image_tasks(filename, settings_manager):
+def wait_for_per_image_tasks(filename, settings_manager, timeout=None):
     """
     Function blocks until all pending per_image tasks have been completed on 
     the image specified by filename.
@@ -51,7 +51,7 @@ def wait_for_per_image_tasks(filename, settings_manager):
     lock_dict = settings_manager.get(
         ["cron_per_image_locks"])["cron_per_image_locks"]
 
-    lock_dict[filename].acquire()
+    lock_dict[filename].acquire(timeout)
 
     settings_manager.operate(
         "cron_per_image_locks", remove_from_dict, filename)

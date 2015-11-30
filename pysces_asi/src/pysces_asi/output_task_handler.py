@@ -156,13 +156,14 @@ class OutputTaskHandler(ThreadQueueBase):
                 output_task.run_subtasks(
                     self._processing_pool, self._pipelined_processing_pool, self._network_manager)
                 self.__pipelined_lock.release()
-
+                timeout = 5
                 # wait for all the subtasks to be executed
-                output_task.wait(5)
+                output_task.wait(timeout)
 
                 # wait for the CronManager to finish with the image files
                 wait_for_per_image_tasks(
-                    output_task.get_image_filename(), self._settings_manager)
+                    output_task.get_image_filename(), self._settings_manager,
+                    timeout=timeout)
 
                 # remove the temporary files
                 output_task.remove_temp_files()

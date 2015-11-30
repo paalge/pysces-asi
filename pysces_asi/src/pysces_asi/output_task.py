@@ -244,7 +244,7 @@ class OutputTask:
         safe_delete = self._settings_manager.get(
             ['safe_delete'])['safe_delete']
 
-        self._running_subtasks_lock.acquire()
+        self._running_subtasks_lock.acquire(timeout=timeout)
         while 0 < len(self._running_subtasks):
             self._running_subtasks[0].completed.wait(timeout)
             try:
