@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE
 
 from pysces_asi.multitask import ThreadQueueBase, RemoteTask
 
-log = logging.getLogger()
+log = logging.getLogger("Network")
 
 
 class _NetworkManagerProxy(ThreadQueueBase):
@@ -246,6 +246,7 @@ class NetworkManager(ThreadQueueBase):
     ##########################################################################
 
     def _copy_to_server(self, source, dest):
+        log.info("Copying to server")
         folder_on_server = self.__settings_manager.get(["web_dir"])["web_dir"]
         os.chmod(source, stat.S_IRWXU + stat.S_IRWXO + stat.S_IRWXG)
         shutil.copyfile(source, os.path.normpath(
