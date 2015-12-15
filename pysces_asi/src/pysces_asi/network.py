@@ -287,7 +287,7 @@ class NetworkManager(ThreadQueueBase):
         and the master).
         """
         while self._stay_alive or (not self._remote_input_queue.empty()):
-            remote_task = self._remote_input_queue.get()
+            remote_task = self._remote_input_queue.get(timeout=5)
 
             if remote_task == None:
                 continue
