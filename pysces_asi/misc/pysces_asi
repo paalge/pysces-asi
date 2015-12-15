@@ -5,9 +5,12 @@
 from pysces_asi import GUI
 import wx
 import logging
+from pysces_asi import stack_tracer
 
 logging.basicConfig(
     filename='/home/aurora/pysces_asi.log', format='%(asctime)s - %(name)s -  %(levelname)s - %(message)s', level=logging.DEBUG)
+
+stack_tracer.trace_start("/home/aurora/pysces_asi.html")
 
 # setup app
 app = wx.PySimpleApp()
