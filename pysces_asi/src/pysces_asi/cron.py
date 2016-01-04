@@ -47,7 +47,7 @@ def wait_for_per_image_tasks(filename, settings_manager, timeout=None):
     Function blocks until all pending per_image tasks have been completed on 
     the image specified by filename.
     """
-
+    
     lock_dict = settings_manager.get(
         ["cron_per_image_locks"])["cron_per_image_locks"]
 

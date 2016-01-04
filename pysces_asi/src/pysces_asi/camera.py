@@ -481,7 +481,7 @@ class GphotoCameraManager(CameraManagerBase):
         while (time_of_capture + datetime.timedelta(minutes=1) > datetime.datetime.utcnow()) and (not flag):
             # give the camera some time to store the image before we start
             # pestering it
-            time.sleep(10)
+            time.sleep(3)
 
             # get list of files on camera
             p = call_shell(

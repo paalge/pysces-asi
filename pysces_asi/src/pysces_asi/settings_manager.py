@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+from Queue import Empty
 """
 The settings_manager module provides the SettingsManager class for managing all the settings (global
 variables) for Pysces. It also provides a proxy for this class, allowing the globals to be shared
@@ -29,6 +30,9 @@ from pysces_asi import persist
 from pysces_asi import settings_file_parser
 from pysces_asi.multitask import ThreadQueueBase, RemoteTask
 
+import logging
+
+log = logging.getLogger("Settings_manager")
 
 class _SettingsManagerProxy(ThreadQueueBase):
     """
@@ -578,7 +582,11 @@ class SettingsManager(ThreadQueueBase):
         and the master).
         """
         while self._stay_alive or (not self._remote_input_queue.empty()):
-            remote_task = self._remote_input_queue.get()
+            try:
+                remote_task = self._remote_input_queue.get()
+            except Empty:
+                log.warn("Process get timed out")
+                continue
 
             if remote_task == None:
                 continue

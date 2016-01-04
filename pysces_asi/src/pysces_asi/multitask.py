@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+from numpy import empty
 """
 The multitask module provides classes to ease parallel processing, both 
 multi-thread and multi-process. The two main classes are ThreadQueueBase and 
@@ -29,6 +30,7 @@ import multiprocessing
 import logging
 
 from Queue import Queue
+from Queue import Empty
 from threading import Event, Thread, currentThread
 
 log = logging.getLogger("multitask")
@@ -97,7 +99,10 @@ class ThreadTask:
         task is completed. If the target function raised an exception when it
         was executed, then calling result() will raise the same exception.
         """
-        self.completed.wait()
+        try:
+            self.completed.wait()
+        except Empty:
+            log.warning("Result timed out")    
         if self._exception is None:
             return self._return_value
         else:
@@ -134,8 +139,12 @@ class ThreadQueueBase:
         """
         while self._stay_alive or (not self._task_queue.empty()):
             # pull a task out of the queue
-
-            task = self._task_queue.get()
+            try: 
+                task = self._task_queue.get()
+            except Empty:
+                log.warn("process get timed out")
+                continue
+            
 
 
 #             log.info(
@@ -250,7 +259,11 @@ class ProcessQueueBase:
         """
         while self._stay_alive or (not self._input_queue.empty()):
 
-            task = self._input_queue.get()
+            try: 
+                task = self._input_queue.get()
+            except Empty:
+                log.warn("Process_tasks get timed out")
+                continue
 
             # if task is None, then it means we should exit - go back to
             # beginning of loop
@@ -396,8 +409,16 @@ class ProcessTask:
         was executed, then calling result() will raise the same exception.
         """
         log.info("Waiting for result in ProcessTask")
-        self.completed.wait()
-        return_value = self.return_queue.get()
+        try:
+            self.completed.wait(timeout=10)
+        except Empty:
+            log.warn("Result wait timed out")
+            return None
+        try:    
+            return_value = self.return_queue.get()
+        except Empty:
+            log.warn("Result get timed out")
+        
         log.info("Got result in ProcessTask")
         if isinstance(return_value, Exception):
             raise return_value

@@ -191,7 +191,7 @@ class Scheduler:
                     last_future_prediction = datetime.datetime.utcnow()
 
                 # wait for a short while before re-evaluating the schedule
-                time.sleep(5)
+                time.sleep(1)
         finally:
             self.exit()
     ##########################################################################

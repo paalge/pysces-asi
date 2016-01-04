@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+from Queue import Empty
 """
 The network module provides a NetworkManager class which can be used for 
 copying files to a CIFS filesystem on a remote server. It also provides
@@ -287,7 +288,11 @@ class NetworkManager(ThreadQueueBase):
         and the master).
         """
         while self._stay_alive or (not self._remote_input_queue.empty()):
-            remote_task = self._remote_input_queue.get(timeout=5)
+            try:
+                remote_task = self._remote_input_queue.get()
+            except Empty:
+                log.warn("Process get timed out")
+                continue    
 
             if remote_task == None:
                 continue

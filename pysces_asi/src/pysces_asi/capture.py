@@ -144,7 +144,7 @@ class CaptureManager(ThreadQueueBase):
                     # capture images and produce output tasks
                     images = self._camera_manager.capture_images()
 
-                # RuntimeError is rasied when gphoto fails in the cameraManager
+                # RuntimeError is raised when gphoto fails in the cameraManager
                 except GphotoError as ex:
                     log.warning("CaptureManager> gphoto fails: " + ex.args[0])
                     self._settings_manager.set(
@@ -153,7 +153,7 @@ class CaptureManager(ThreadQueueBase):
                     start_time = datetime.datetime.utcnow()
 
                 if images is not None:
-                    # create an outputTask obejct for each image type and pass
+                    # create an outputTask object for each image type and pass
                     # them to the ouputTaskHandler
                     output_tasks = create_output_tasks(
                         capture_mode, images, folder_on_host, self._settings_manager)
@@ -176,7 +176,7 @@ class CaptureManager(ThreadQueueBase):
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
                                 flag = False
-                            time.sleep(1)
+                            time.sleep(0.2)
                         except Exception as ex:
                             traceback.print_exc()
                             self.exit()

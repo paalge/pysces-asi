@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+from Queue import Empty
 """
 This module provides the OutputTaskHandler class, which is responsible
 for post-processing the images to produce the desired outputs. 
@@ -158,12 +159,20 @@ class OutputTaskHandler(ThreadQueueBase):
                 self.__pipelined_lock.release()
                 timeout = 5
                 # wait for all the subtasks to be executed
-                output_task.wait(timeout)
+                try:
+                    
+                    output_task.wait(timeout)
+                except Empty:
+                    log.warn("Out_task wait timed out")
+                    
                 log.info("Waiting over")
                 # wait for the CronManager to finish with the image files
-                wait_for_per_image_tasks(
+                try:
+                    wait_for_per_image_tasks(
                     output_task.get_image_filename(), self._settings_manager,
                     timeout=timeout)
+                except Empty:
+                    log.warn("Out_task image timed out")
                 log.info("Per image wait over")
                 # remove the temporary files
                 output_task.remove_temp_files()

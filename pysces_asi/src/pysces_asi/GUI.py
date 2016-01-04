@@ -141,7 +141,7 @@ class TimePanel(wx.Panel):
             self.date.SetLabel(
                 "\nDate: " + datetime.datetime.utcnow().strftime("%d/%m/%Y"))
             wx.MutexGuiLeave()
-            time.sleep(1)
+            time.sleep(0.2)
 
     def exit(self):
         self.__stay_alive = False
