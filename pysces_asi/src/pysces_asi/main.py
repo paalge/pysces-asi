@@ -52,7 +52,7 @@ class MainBox:
                 target=self.__scheduler.start)
             self.__capture_thread.start()
         else:
-            raise RuntimeError("Cannont start more than one scheduler!")
+            raise RuntimeError("Can't start more than one scheduler!")
 
     ##########################################################################
 

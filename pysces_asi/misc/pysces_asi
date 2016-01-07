@@ -17,5 +17,6 @@ app = wx.PySimpleApp()
 
 frame = GUI.MainFrame()
 frame.Show()
+frame.start_pysces(None)
 
 app.MainLoop()

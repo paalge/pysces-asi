@@ -34,10 +34,6 @@ from Queue import Empty
 from threading import Event, Thread, currentThread
 
 log = logging.getLogger("multitask")
-<<<<<<< HEAD
-=======
-
->>>>>>> cc2e728289147814b47605c5b67ed5e4e4941bff
 
 
 class RemoteTask:
