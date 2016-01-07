@@ -34,6 +34,10 @@ from Queue import Empty
 from threading import Event, Thread, currentThread
 
 log = logging.getLogger("multitask")
+<<<<<<< HEAD
+=======
+
+>>>>>>> cc2e728289147814b47605c5b67ed5e4e4941bff
 
 
 class RemoteTask:
@@ -274,7 +278,6 @@ class ProcessQueueBase:
             # a OSError "No child processes" during the following bit of code. This *might*
             # have been fixed in python2.6, but nobody seems sure, so just in case we wrap it
             # in a try except block
-
 #             log.info(
 #                 "Executing worker task (in ProcessQueueBase): ")
             try:
@@ -292,7 +295,6 @@ class ProcessQueueBase:
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
-
                 log.warning(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")
                 print(
