@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+import sys
 """
 The capture module provides a single class, the CaptureManager. This recieves
 CaptureMode objects from the Scheduler class, sets the camera configs, and 
@@ -176,7 +177,9 @@ class CaptureManager(ThreadQueueBase):
                                     "CaptureManager> Waiting for OutputTaskHandler")
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
-                                break
+                                self.exit()
+                                self._exit_event.set()
+                                return
                                 flag = False
                             else:
                                 output_tasks[0].wait(timeout=0.01)
