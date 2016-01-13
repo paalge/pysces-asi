@@ -179,6 +179,7 @@ class CaptureManager(ThreadQueueBase):
                                 flag = False
                             else:
                                 output_tasks[0].wait(timeout=0.01)
+                                
                             time.sleep(0.2)
                         except Exception as ex:
                             traceback.print_exc()
