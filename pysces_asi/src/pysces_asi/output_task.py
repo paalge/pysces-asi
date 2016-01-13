@@ -228,7 +228,7 @@ class OutputTask:
                 task = pipelined_processing_pool.create_task(
                     sub_task.execute, self._settings_manager.create_proxy(), network_mananger_proxy)
                 self._running_subtasks.append(task)
-                pipelined_processing_pool.commit_task(task)
+                pipelined_processing_pool.commit_task(task, timeout=10)
 
             else:
                 task = processing_pool.create_task(

@@ -120,8 +120,8 @@ class ThreadQueueBase:
     """
 
     def __init__(self, workers=1, maxsize=0, name="Un-named"):
-        self._task_queue = Queue(maxsize=maxsize)
         self._workers = []
+        self._task_queue = Queue(maxsize=maxsize)
         self._stay_alive = True
         self.name = name
         self._exit_event = Event()
@@ -184,7 +184,7 @@ class ThreadQueueBase:
 #                     "### Error! ### Worker thread in " + self.name + " has died!")
 
         if self._stay_alive:
-            self._task_queue.put(task, block=False, timeout=timeout)
+            self._task_queue.put(task, timeout=timeout)
 
     ###########################################################################
 
@@ -287,6 +287,7 @@ class ProcessQueueBase:
                             self._input_queue.task_done()
                             i = i - 1
                             self._process_count = self._process_count - 1
+
                         i = i + 1
                     time.sleep(0.001)
             except OSError:
@@ -326,7 +327,7 @@ class ProcessQueueBase:
 
     ###########################################################################
 
-    def commit_task(self, task):
+    def commit_task(self, task, timeout=None):
         """
         Puts the specified task into the input queue where it will be executed
         in its own process. The task's result() method be used for syncronising 
@@ -338,7 +339,7 @@ class ProcessQueueBase:
 #             raise RuntimeError(
 #                 "### Error! ### Worker thread in " + self.name + " has died!")
         else:
-            self._input_queue.put(task)
+            self._input_queue.put(task, timeout=timeout)
 
     ###########################################################################
 

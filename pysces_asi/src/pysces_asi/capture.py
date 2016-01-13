@@ -176,7 +176,6 @@ class CaptureManager(ThreadQueueBase):
                                     "CaptureManager> Waiting for OutputTaskHandler")
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
-                                break
                                 flag = False
                             else:
                                 output_tasks[0].wait(timeout=0.01)
