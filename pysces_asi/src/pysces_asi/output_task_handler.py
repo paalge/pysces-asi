@@ -85,12 +85,12 @@ class OutputTaskHandler(ThreadQueueBase):
         self.__pipelined_lock = threading.Lock()
 
         ThreadQueueBase.__init__(self, name="OutputTaskHandler", workers=multiprocessing.cpu_count(
-        ), maxsize=1 + 2)
+        ), maxsize=multiprocessing.cpu_count() + 2)
 
         # create a processing pool to produce the outputs asyncronously - this
         # has as many workers as there are CPU cores
         self._processing_pool = ProcessQueueBase(
-            workers=1, name="Processing Pool")  # multiprocessing.cpu_count()
+            workers=multiprocessing.cpu_count(), name="Processing Pool")  # multiprocessing.cpu_count()
 
         # create a processing pool to produce outputs in the order that their respective image types
         # are recieved from the camera (useful for creating keograms for

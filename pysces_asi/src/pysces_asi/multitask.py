@@ -100,7 +100,7 @@ class ThreadTask:
         was executed, then calling result() will raise the same exception.
         """
         try:
-            self.completed.wait(timeout=10)
+            self.completed.wait()
         except Empty:
             log.warning("Result timed out")
         if self._exception is None:
