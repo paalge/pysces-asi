@@ -289,6 +289,7 @@ class ProcessQueueBase:
                             self._process_count = self._process_count - 1
                         i = i + 1
                     time.sleep(0.001)
+                    log.warning("Waiting for active processes to finish ")
             except OSError:
                 log.warning(
                     "Syncronisation error in ProcessQueueBase! Task has been re-submitted.: ")

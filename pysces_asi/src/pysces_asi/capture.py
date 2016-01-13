@@ -169,7 +169,7 @@ class CaptureManager(ThreadQueueBase):
                             self._output_task_handler.commit_task(
                                 output_tasks[i])
                             i += 1
-                        except Queue.Full:
+                        except Queue.Full as ex:
                             # the outputTaskHandler is busy, wait for a bit and
                             # then retry
                             if flag:
@@ -177,12 +177,15 @@ class CaptureManager(ThreadQueueBase):
                                     "CaptureManager> Waiting for OutputTaskHandler")
                                 self._settings_manager.set(
                                     {"output": "CaptureManager> Waiting for OutputTaskHandler"})
-                                self.exit()
-                                self._exit_event.set()
-                                return
+                                
+                                traceback.print_exc()
+                                
+                                # self.exit(1)
+                                # raise ex
                                 flag = False
                             else:
                                 output_tasks[0].wait(timeout=0.01)
+                                output_tasks[0]._stay_alive=False
 
                             time.sleep(0.2)
                         except Exception as ex:
