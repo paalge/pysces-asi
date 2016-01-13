@@ -32,7 +32,7 @@ import glob
 from pysces_asi import network
 from pysces_asi.multitask import ThreadQueueBase, ThreadTask, ProcessQueueBase
 from pysces_asi.output_task import OutputTask, output_functions
-from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
+# from pysces_asi.cron import wait_for_per_image_tasks, submit_image_for_cron
 
 log = logging.getLogger("task_handler")
 
@@ -90,7 +90,7 @@ class OutputTaskHandler(ThreadQueueBase):
         # create a processing pool to produce the outputs asyncronously - this
         # has as many workers as there are CPU cores
         self._processing_pool = ProcessQueueBase(
-            workers=1, name="Processing Pool")#multiprocessing.cpu_count()
+            workers=1, name="Processing Pool")  # multiprocessing.cpu_count()
 
         # create a processing pool to produce outputs in the order that their respective image types
         # are recieved from the camera (useful for creating keograms for
@@ -148,10 +148,10 @@ class OutputTaskHandler(ThreadQueueBase):
 
             elif isinstance(output_task, OutputTask):
 
-                # submit the image file for cron processing
-                log.info("Submitting  image for cron")
-                submit_image_for_cron(
-                    output_task.get_image_filename(), self._settings_manager)
+                #                 # submit the image file for cron processing
+                #                 log.info("Submitting  image for cron")
+                #                 submit_image_for_cron(
+                # output_task.get_image_filename(), self._settings_manager)
 
                 # run all the sub tasks in separate processes
                 output_task.run_subtasks(
@@ -160,20 +160,22 @@ class OutputTaskHandler(ThreadQueueBase):
                 timeout = 5
                 # wait for all the subtasks to be executed
                 try:
-                    
+
                     output_task.wait(timeout)
                 except Empty:
                     log.warn("Out_task wait timed out")
-                    
+
                 log.info("Waiting over")
                 # wait for the CronManager to finish with the image files
-                try:
-                    wait_for_per_image_tasks(
-                    output_task.get_image_filename(), self._settings_manager,
-                    timeout=timeout)
-                except Empty:
-                    log.warn("Out_task image timed out")
-                log.info("Per image wait over")
+                #==============================================================
+                # try:
+                #     wait_for_per_image_tasks(
+                #     output_task.get_image_filename(), self._settings_manager,
+                #     timeout=timeout)
+                # except Empty:
+                #     log.warn("Out_task image timed out")
+                # log.info("Per image wait over")
+                #==============================================================
                 # remove the temporary files
                 output_task.remove_temp_files()
                 del output_task

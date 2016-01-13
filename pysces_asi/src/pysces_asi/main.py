@@ -23,7 +23,7 @@ matplotlib.use('Agg')
 
 from pysces_asi import settings_manager
 from pysces_asi import scheduler
-from pysces_asi import cron
+# from pysces_asi import cron
 
 
 class MainBox:
@@ -35,8 +35,8 @@ class MainBox:
         self.__settings_manager = settings_manager.SettingsManager()
 
         # create cron manager and run intialisation tasks
-        self.__cron_manager = cron.CronManager(self.__settings_manager)
-        self.__cron_manager.run_init_tasks()
+        # self.__cron_manager = cron.CronManager(self.__settings_manager)
+        # self.__cron_manager.run_init_tasks()
 
         # create scheduler object
         self.__scheduler = scheduler.Scheduler(self.__settings_manager)
@@ -77,9 +77,9 @@ class MainBox:
         self.stop()
 
         # kill cron manager
-        self.__settings_manager.set(
-            {"output": "MainBox> Killing cron manager"})
-        self.__cron_manager.exit()
+        # self.__settings_manager.set(
+        #    {"output": "MainBox> Killing cron manager"})
+        # self.__cron_manager.exit()
 
         # kill settings manager
         self.__settings_manager.set(
