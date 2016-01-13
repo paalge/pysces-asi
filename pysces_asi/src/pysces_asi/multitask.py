@@ -100,9 +100,9 @@ class ThreadTask:
         was executed, then calling result() will raise the same exception.
         """
         try:
-            self.completed.wait()
+            self.completed.wait(timeout=10)
         except Empty:
-            log.warning("Result timed out")    
+            log.warning("Result timed out")
         if self._exception is None:
             return self._return_value
         else:
@@ -139,12 +139,11 @@ class ThreadQueueBase:
         """
         while self._stay_alive or (not self._task_queue.empty()):
             # pull a task out of the queue
-            try: 
+            try:
                 task = self._task_queue.get()
             except Empty:
                 log.warn("process get timed out")
                 continue
-            
 
 
 #             log.info(
@@ -259,7 +258,7 @@ class ProcessQueueBase:
         """
         while self._stay_alive or (not self._input_queue.empty()):
 
-            try: 
+            try:
                 task = self._input_queue.get()
             except Empty:
                 log.warn("Process_tasks get timed out")
@@ -412,11 +411,11 @@ class ProcessTask:
         except Empty:
             log.warn("Result wait timed out")
             return None
-        try:    
+        try:
             return_value = self.return_queue.get()
         except Empty:
             log.warn("Result get timed out")
-        
+
         log.info("Got result in ProcessTask")
         if isinstance(return_value, Exception):
             raise return_value
