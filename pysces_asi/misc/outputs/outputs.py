@@ -28,7 +28,7 @@ from PASKIL import allskyKeo, allskyPlot
 from pysces_asi.output_task_handler import register
 
 
-log=logging.getLogger("outputs")
+log = logging.getLogger("outputs")
 ##########################################################################
 
 
@@ -46,7 +46,6 @@ def copy_image(image, output, settings_manager):
     settings_manager.set(
         {"output": "OutputTaskHandler> Copying " + source_path + " to " + dest_path})
     shutil.copyfile(source_path, dest_path)
-    
 
     return None
 
@@ -144,7 +143,6 @@ def realtime_keogram(image, output, settings_manager):
 
         keo = allskyKeo.new([image], output.angle, start_time, end_time, strip_width=output.strip_width,
                             data_spacing=output.data_spacing, keo_fov_angle=output.fov_angle)
-        
 
         try:
             keo.save(os.path.expanduser('~') + "/realtime_keogram")
@@ -158,8 +156,8 @@ def realtime_keogram(image, output, settings_manager):
         log.info("Opening keogram")
         try:
             keo = allskyKeo.load(filename)
-        except e:
-            print(e)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
         settings_manager.set(
             {'output': "OutputTaskHandler> Adding image to realtime keogram."})
 
@@ -171,8 +169,8 @@ def realtime_keogram(image, output, settings_manager):
             keo = keo.roll([image])
             try:
                 keo.save(filename)
-            except :
-                print(e)
+            except:
+                print("Unexpected error:", sys.exc_info()[0])
         else:
             # some of the settings must have changed - time to start a new
             # keogram
