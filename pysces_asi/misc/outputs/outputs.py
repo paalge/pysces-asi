@@ -151,12 +151,16 @@ def realtime_keogram(image, output, settings_manager):
                 '~') + "/realtime_keogram", persistant=True)
         except ValueError:
             # value already exists - just update it to the new value
+	    print("Unexpected error:", sys.exc_info()[0])
             settings_manager.set(
                 {'user_rt_keo_name': os.path.expanduser('~') + "/realtime_keogram"})
     else:
         log.info("Opening keogram")
         try:
             keo = allskyKeo.load(filename)
+	except IOError: 
+	    print("Unexpected error:", sys.exc_info()[0])
+	    print(filename)
         except:
             print("Unexpected error:", sys.exc_info()[0])
         settings_manager.set(
