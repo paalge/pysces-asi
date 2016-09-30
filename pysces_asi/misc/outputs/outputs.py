@@ -22,6 +22,7 @@ for details on producing outputs.
 import os
 import shutil
 import datetime
+import sys
 import logging
 
 from PASKIL import allskyKeo, allskyPlot
