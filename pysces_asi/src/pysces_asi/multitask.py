@@ -302,17 +302,21 @@ class ProcessQueueBase:
             not_started = True
             while not_started:
                 try:
+                    log.info("Starting process")
+    
+                    task.execute()
+                    
                     # create a new process to run the task
-                    p = multiprocessing.Process(target=task.execute)
-                    self._active_processes.append(p)
-                    self._process_count = self._process_count + 1
-                    p.start()
+                    #p = multiprocessing.Process(target=task.execute)
+                    #self._active_processes.append(p)
+                    #self._process_count = self._process_count + 1
+                    #log.info("Starting process")
+                    #  p.start()
                     not_started = False
                 except OSError:
                     log.warning("OSError: ")
-                    self._active_processes.remove(p)
-                    self._process_count = self._process_count - 1
-
+                    #self._active_processes.remove(p)
+                    #self._process_count = self._process_count - 1
     ###########################################################################
 
     def create_task(self, func, *args, **kwargs):
@@ -385,7 +389,7 @@ class ProcessTask:
         # try to run the function. If it fails then store the exception object
         # to pass to outside thread
         try:
-            #             log.info("Exececute task in ProcessTask")
+            #             log.info("Execute task in ProcessTask")
             self.return_queue.put(self._function(*self._args,
                                                  **self._kwargs))
 

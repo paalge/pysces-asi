@@ -16,6 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with pysces_asi.  If not, see <http://www.gnu.org/licenses/>.
+import signal
 """
 The camera module provides base classes for controlling the camera, these are
 unusable by themselves and must be sub-classed. It also provides the 
@@ -30,7 +31,8 @@ import time
 import glob
 import os.path
 import imp
-from subprocess32 import STDOUT, check_output as qx
+# Import backport of the python 3.2 subprocess that contains timeout
+from subprocess32 import STDOUT, check_output as qx, TimeoutExpired, Popen
 from subprocess32 import CalledProcessError
 
 from pysces_asi.multitask import ThreadQueueBase, ThreadTask
@@ -73,6 +75,23 @@ def clear_plugins_list():
     """
     cameras.clear()
 
+def _timeout_call(command,timeout,stderr=STDOUT):
+    " For making sure the process dies after timeout"
+    if stderr is None:
+        with Popen(command, shell=True, preexec_fn=os.setsid) as process:
+            try:
+                output,_ = process.communicate(timeout=timeout)
+            except TimeoutExpired:
+                os.killpg(process.pid, signal.SIGINT) # send signal to the process group
+                output,_ = process.communicate()
+    else:
+        with Popen(command, shell=True, stderr=stderr, preexec_fn=os.setsid) as process:
+            try:
+                output,_ = process.communicate(timeout=timeout)
+            except TimeoutExpired:
+                os.killpg(process.pid, signal.SIGINT) # send signal to the process group
+                output,_ = process.communicate()
+    return output
 
 def call_shell(command, timeout, error_text, output_stderr=False):
     """ 
@@ -98,7 +117,6 @@ def call_shell(command, timeout, error_text, output_stderr=False):
     stdout : the stdout
           str
     """
-
     try:
         if output_stderr:
             output = qx(command, shell=True, stderr=STDOUT, timeout=timeout)
@@ -107,7 +125,9 @@ def call_shell(command, timeout, error_text, output_stderr=False):
     except CalledProcessError:
         raise GphotoError(
             error_text + " \n Command:" + command)
-
+    except TimeoutExpired :
+        raise GphotoError(
+            "Timeout" + " \n Command:" + command)
     return output
 
 
@@ -373,7 +393,7 @@ class GphotoCameraManager(CameraManagerBase):
 
         # run gphoto function in separate process and record any output
         p = call_shell(
-            "gphoto2 --auto-detect", 30, error_text="GPhoto2 Error: failed to auto detect")
+            "gphoto2 --auto-detect", 60, error_text="GPhoto2 Error: failed to auto detect")
 
         # read the output from the pipes
         out = p.splitlines()
@@ -415,6 +435,9 @@ class GphotoCameraManager(CameraManagerBase):
         """
 
         # take the picture!
+        
+        
+        
         time_of_capture = datetime.datetime.utcnow()
         self._settings_manager.set(
             {"output": "CameraManager> Capturing image and downloading."})
@@ -426,13 +449,16 @@ class GphotoCameraManager(CameraManagerBase):
                 'tmp dir'] + "/" + time_of_capture.strftime("%Y%m%d_%H%M%S") + ".%C\""
         print(g_cmd)
         try:
-            output = qx(g_cmd, shell=True, stderr=STDOUT, timeout=60)
+            output=_timeout_call(g_cmd, timeout=120)
+            # output = qx(g_cmd, shell=True, stderr=STDOUT, timeout=60)
             print(output)
-            if output.find("ERROR: Could not capture image.")!=-1:
-                call_shell("gphoto2 --reset", timeout=30,error_text="Couldn't reset")
+            if output is not None:
+                if  output.find("ERROR: Could not capture image.")!=-1:
+                    call_shell("gphoto2 --reset", timeout=30,error_text="Couldn't reset")
         except CalledProcessError:
             raise GphotoError(
                 "Gphoto2 Error: Failed to capture and download image + \n Command:" + g_cmd)
+        
         # Wait and print errors
         return time_of_capture
     ##########################################################################
